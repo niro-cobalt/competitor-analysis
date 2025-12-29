@@ -14,6 +14,8 @@ interface Subscriber {
   createdAt: string;
 }
 
+import { ShieldCheck, UserPlus, Users } from 'lucide-react';
+
 export default function AdminPage() {
   const [email, setEmail] = useState('');
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -56,59 +58,71 @@ export default function AdminPage() {
     } catch (error) {
       toast.error('Error subscribing');
     }
-  };
+  }; 
 
   return (
-    <div className="p-8 space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
-        <p className="text-muted-foreground">Manage newsletter subscriptions.</p>
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between">
+         <div className="space-y-1">
+            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                <ShieldCheck className="h-6 w-6 text-primary" />
+                Admin Dashboard
+            </h2>
+            <p className="text-sm text-muted-foreground">Manage newsletter subscriptions and system settings.</p>
+        </div>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <Card>
-            <CardHeader>
-                <CardTitle>Add Subscriber</CardTitle>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="glass-card border-white/20">
+            <CardHeader className="relative z-10 pb-2">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+                    <UserPlus className="h-4 w-4" />
+                    Add Subscriber
+                </CardTitle>
                 <CardDescription>Manually add an email to the newsletter list.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
                 <div className="flex w-full max-w-sm items-center space-x-2">
                     <Input 
                         type="email" 
                         placeholder="Email address" 
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        className="bg-white/50 border-white/30 focus:bg-white/80 transition-all dark:bg-black/20"
                     />
-                    <Button onClick={handleSubscribe}>Subscribe</Button>
+                    <Button onClick={handleSubscribe} className="shadow-md shrink-0">Subscribe</Button>
                 </div>
             </CardContent>
         </Card>
 
-        <Card>
-            <CardHeader>
-                <CardTitle>Current Subscribers ({subscribers.length})</CardTitle>
+        <Card className="glass-card border-white/20 h-full">
+            <CardHeader className="relative z-10 pb-2">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+                    <Users className="h-4 w-4" />
+                    Current Subscribers ({subscribers.length})
+                </CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="max-h-[400px] overflow-y-auto rounded-md border">
+            <CardContent className="relative z-10 p-0">
+                <div className="max-h-[350px] overflow-y-auto border-t border-white/10 scrollbar-thin scrollbar-thumb-primary/10">
                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Email</TableHead>
-                                <TableHead className="text-right">Joined</TableHead>
+                        <TableHeader className="bg-white/20 backdrop-blur-sm sticky top-0 z-10">
+                            <TableRow className="hover:bg-transparent border-white/10">
+                                <TableHead className="text-foreground/80 font-semibold h-10 text-xs uppercase tracking-wider">Email</TableHead>
+                                <TableHead className="text-right text-foreground/80 font-semibold h-10 text-xs uppercase tracking-wider">Joined</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {subscribers.map((sub) => (
-                                <TableRow key={sub._id}>
-                                    <TableCell>{sub.email}</TableCell>
-                                    <TableCell className="text-right">
+                                <TableRow key={sub._id} className="hover:bg-white/20 border-white/10 transition-colors">
+                                    <TableCell className="font-medium text-sm py-2.5">{sub.email}</TableCell>
+                                    <TableCell className="text-right text-muted-foreground text-xs py-2.5">
                                         {format(new Date(sub.createdAt), 'MMM d, yyyy')}
                                     </TableCell>
                                 </TableRow>
                             ))}
                             {subscribers.length === 0 && !loading && (
                                 <TableRow>
-                                    <TableCell colSpan={2} className="text-center h-20 text-muted-foreground">
+                                    <TableCell colSpan={2} className="text-center h-24 text-muted-foreground text-sm">
                                         No subscribers yet.
                                     </TableCell>
                                 </TableRow>

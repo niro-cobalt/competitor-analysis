@@ -116,6 +116,7 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
     2. Executive Summary: High-level overview of the market landscape changes today.
     3. Major Updates (if any): Detailed breakdown of competitors with Impact Score > 0.
     4. Competitor Status Table: A table listing ALL competitors with columns: Name, Status (Updated/No Change), Impact Score.
+    5. Footer: "View full dashboard: https://competitor-analysis-sigma.vercel.app/" (Make this a visible button or link).
     
     Style Guide (Use inline CSS):
     - Font: System UI, -apple-system, sans-serif.

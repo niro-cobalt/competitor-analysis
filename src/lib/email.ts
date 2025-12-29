@@ -1,7 +1,9 @@
 import { Resend } from 'resend';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM || 'Competitor Analysis <onboarding@resend.dev>';
+const envFrom = process.env.EMAIL_FROM;
+const defaultFrom = 'Competitor Analysis <onboarding@resend.dev>';
+const EMAIL_FROM = (envFrom && envFrom.includes('@')) ? envFrom : defaultFrom;
 const EMAIL_TO = process.env.EMAIL_TO;
 
 if (!RESEND_API_KEY) {
@@ -17,6 +19,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
     }
 
     try {
+        console.log("Sending email from:", EMAIL_FROM);
         const data = await resend.emails.send({
             from: EMAIL_FROM,
             to: to,

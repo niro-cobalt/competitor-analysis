@@ -86,10 +86,11 @@ export async function POST() {
                  const emailRes = await sendEmail(recipient, subject, emailHtml);
                  
                  // Log to DB
-                 await EmailLog.create({
+                  await EmailLog.create({
                     subject: subject,
                     recipient: recipient,
                     content: emailHtml,
+                    structuredData: emailData,
                     status: emailRes.success ? 'sent' : 'failed',
                     error: emailRes.error ? String(emailRes.error) : undefined
                  });

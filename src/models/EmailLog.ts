@@ -4,6 +4,7 @@ export interface IEmailLog extends Document {
   subject: string;
   recipient: string;
   content: string;
+  structuredData?: any;
   status: 'sent' | 'failed';
   error?: string;
   sentAt: Date;
@@ -13,6 +14,7 @@ const EmailLogSchema: Schema = new Schema({
   subject: { type: String, required: true },
   recipient: { type: String, required: true },
   content: { type: String, required: true },
+  structuredData: { type: Schema.Types.Mixed },
   status: { type: String, enum: ['sent', 'failed'], required: true },
   error: { type: String },
   sentAt: { type: Date, default: Date.now },

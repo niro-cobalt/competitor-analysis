@@ -60,18 +60,44 @@ export async function POST() {
         console.log("Sending email...");
         
         const subject = `Competitor Update - ${new Date().toLocaleDateString()}`;
-        const emailRes = await sendEmail(subject, emailHtml);
         
-        emailStatus = emailRes.success ? 'sent' : 'failed';
+        // Fetch subscribers
+        // Dynamically import to avoid circular dep if any, though unlikely.
+        const Subscriber = (await import('@/models/Subscriber')).default;
+        const subscribers = await Subscriber.find({});
+        
+        const recipients = subscribers.map(s => s.email);
+        // Fallback to Env var if list is empty, or just for testing
+        if (process.env.EMAIL_TO && !recipients.includes(process.env.EMAIL_TO)) {
+            recipients.push(process.env.EMAIL_TO);
+        }
 
-        // Log to DB
-        await EmailLog.create({
-            subject: subject,
-            recipient: process.env.EMAIL_TO || 'unknown',
-            content: emailHtml,
-            status: emailStatus,
-            error: emailRes.error ? String(emailRes.error) : undefined
-        });
+        if (recipients.length === 0) {
+             console.log("No subscribers to send to.");
+        } else {
+            console.log(`Sending to ${recipients.length} recipients...`);
+            
+            // Send individually or bcc? Resend supports batching but loop is fine for small scale.
+            // Ideally use BCC or separate calls.
+            // For privacy, separate calls is better, or one call with bcc if supported by Resend explicitly (resend free tier has limits).
+            // Let's loop for max privacy and robust logging.
+            
+            for (const recipient of recipients) {
+                 const emailRes = await sendEmail(recipient, subject, emailHtml);
+                 
+                 // Log to DB
+                 await EmailLog.create({
+                    subject: subject,
+                    recipient: recipient,
+                    content: emailHtml,
+                    status: emailRes.success ? 'sent' : 'failed',
+                    error: emailRes.error ? String(emailRes.error) : undefined
+                 });
+                 
+                 // Update global status just to indicate activity
+                 emailStatus = 'processed';
+            }
+        }
     }
 
     return NextResponse.json({ 

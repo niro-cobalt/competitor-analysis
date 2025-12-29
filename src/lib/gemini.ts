@@ -109,17 +109,25 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
 
     Task: Write a professional, concise, and insightful executive summary email in HTML format.
     
-    Structure:
-    1. <h1>Title</h1> (Daily Competitor Intelligence Brief - [Date])
-    2. <h2>Executive Summary</h2> (1 paragraph regarding the most important updates)
-    3. <h2>Competitor Updates</h2> (Iterate over the meaningful updates. Group by competitor. Use bullet points).
-    4. If there are no major changes, mention that the landscape is stable.
+    CRITICAL REQUIREMENT: You MUST include a section that lists EVERY SINGLE competitor scanned, even if there were no updates.
     
-    Style:
-    - Clean, modern HTML with inline CSS.
-    - Use specific details from the changes detected.
-    - Highlight high-impact (score > 6) changes in red or bold.
-    - Do NOT include markdown code blocks (like \`\`\`html), just return the raw HTML string start to finish.
+    Structure:
+    1. Header: "Daily Competitor Intelligence Brief" with today's date.
+    2. Executive Summary: High-level overview of the market landscape changes today.
+    3. Major Updates (if any): Detailed breakdown of competitors with Impact Score > 0.
+    4. Competitor Status Table: A table listing ALL competitors with columns: Name, Status (Updated/No Change), Impact Score.
+    
+    Style Guide (Use inline CSS):
+    - Font: System UI, -apple-system, sans-serif.
+    - Container: max-width 600px, margin auto, padding 20px, light gray background #f9fafb.
+    - Card Style: White background, rounded corners, slight shadow, padding 20px, margin-bottom 15px.
+    - Headings: Dark slate text (#111827), bold.
+    - Table: 100% width, border-collapse collapse, margin-top 20px.
+    - Status Badges: 
+       - "Major Update" (Score > 6): Red background (#fee2e2), red text (#991b1b).
+       - "Minor Update" (Score > 0): Yellow background (#fef3c7), yellow text (#92400e).
+       - "No Change": Green background (#dcfce7), green text (#166534).
+    - Do NOT include markdown code blocks (like \`\`\`html), return ONLY the raw HTML string.
     `;
 
     try {

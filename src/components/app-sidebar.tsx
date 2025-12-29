@@ -34,6 +34,12 @@ export function AppSidebar() {
       href: '/emails',
       active: pathname === '/emails',
     },
+    {
+      label: 'Admin',
+      icon: Settings,
+      href: '/admin',
+      active: pathname === '/admin',
+    },
   ];
 
   return (

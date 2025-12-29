@@ -10,16 +10,16 @@ if (!RESEND_API_KEY) {
 
 const resend = new Resend(RESEND_API_KEY);
 
-export async function sendEmail(subject: string, html: string) {
-    if (!RESEND_API_KEY || !EMAIL_TO) {
-        console.warn("Missing email configuration. Skipping email.");
+export async function sendEmail(to: string, subject: string, html: string) {
+    if (!RESEND_API_KEY) {
+        console.warn("Missing email configuration (RESEND_API_KEY). Skipping email.");
         return { success: false, error: 'Missing configuration' };
     }
 
     try {
         const data = await resend.emails.send({
             from: EMAIL_FROM,
-            to: EMAIL_TO,
+            to: to,
             subject: subject,
             html: html,
         });

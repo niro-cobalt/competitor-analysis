@@ -130,29 +130,30 @@ export default function Dashboard() {
                  {latestEmail ? (
                     <Card className="glass-card overflow-hidden border-0 ring-1 ring-white/20 shadow-xl relative flex flex-col h-full">
                         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-purple-500 to-pink-500" />
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 relative z-10 bg-white/40 dark:bg-black/40 backdrop-blur-md border-b border-white/10 shrink-0">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-full bg-primary/10 text-primary ring-1 ring-primary/20">
-                                    <Mail className="h-5 w-5" />
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 relative z-10 bg-white/40 dark:bg-black/40 backdrop-blur-md border-b border-white/10 shrink-0 min-h-[60px]">
+                             <div className="flex items-center gap-3">
+                                <div className="p-1.5 rounded-full bg-primary/10 text-primary ring-1 ring-primary/20">
+                                    <Mail className="h-4 w-4" />
                                 </div>
-                                <div>
-                                    <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                                        Latest Intelligence Briefing
+                                <div className="flex items-baseline gap-2">
+                                    <CardTitle className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+                                        Latest Intelligence
                                     </CardTitle>
-                                    <p className="text-xs text-muted-foreground mt-0.5 font-medium">
-                                        Generated {formatDistanceToNow(new Date(latestEmail.sentAt), { addSuffix: true })}
-                                    </p>
+                                    <span className="text-[10px] text-muted-foreground font-medium bg-white/20 px-1.5 py-0.5 rounded-full">
+                                        {formatDistanceToNow(new Date(latestEmail.sentAt), { addSuffix: true })}
+                                    </span>
                                 </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="text-xs font-mono bg-background/50 px-2 py-1 rounded border border-white/10 text-muted-foreground">
-                                    {latestEmail.recipient}
-                                </div>
-                            </div>
+                             </div>
+                             <div className="text-[10px] font-mono bg-background/50 px-2 py-1 rounded border border-white/10 text-muted-foreground opacity-70">
+                                {latestEmail.recipient}
+                             </div>
                         </CardHeader>
                         <CardContent className="p-0 bg-white/60 dark:bg-black/20 flex-1 overflow-hidden relative">
-                            <div className="h-full overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-                                <div className="prose prose-sm max-w-none dark:prose-invert prose-headings:font-bold prose-h1:text-2xl prose-a:text-primary hover:prose-a:text-primary/80 prose-img:rounded-lg shadow-sm bg-white p-8 rounded-xl border border-border/50 mx-auto max-w-4xl" dangerouslySetInnerHTML={{ __html: latestEmail.content }} />
+                             <div className="h-full overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                                {/* Zoom out content slightly to fit more */}
+                                <div className="origin-top-left transform scale-95 w-[105%]">
+                                    <div className="prose prose-xs max-w-none dark:prose-invert prose-headings:font-bold prose-h1:text-xl prose-p:leading-tight prose-li:leading-tight prose-a:text-primary hover:prose-a:text-primary/80 prose-img:rounded-lg shadow-sm bg-white p-6 rounded-xl border border-border/50 mx-auto" dangerouslySetInnerHTML={{ __html: latestEmail.content }} />
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

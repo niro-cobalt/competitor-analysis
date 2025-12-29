@@ -15,16 +15,35 @@ export async function scanCompetitor(competitorId: string) {
 
     // 1. Fetch current content using Puppeteer
     let textContent = '';
-    
-    // Dynamically import puppeteer
-    const puppeteer = (await import('puppeteer')).default;
-    
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    let browser: any = null;
 
     try {
+        if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+             // Production (Vercel)
+             console.log("Running in production (Vercel) mode...");
+             const chromium = (await import('@sparticuz/chromium')).default;
+             const puppeteerCore = (await import('puppeteer-core')).default;
+             
+             // Optional: Load local font support if necessary for screenshots, but for text it's fine without
+             // await chromium.font('...');
+
+             browser = await puppeteerCore.launch({
+                args: chromium.args,
+                defaultViewport: { width: 1920, height: 1080 },
+                executablePath: await chromium.executablePath(),
+                headless: true,
+             });
+
+        } else {
+            // Local Development
+             console.log("Running in local development mode...");
+             const puppeteer = (await import('puppeteer')).default;
+             browser = await puppeteer.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+             });
+        }
+    
       const page = await browser.newPage();
       
       // Set a real user agent

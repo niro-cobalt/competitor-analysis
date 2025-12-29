@@ -98,3 +98,44 @@ export async function analyzeCompetitorUpdate(
     throw error;
   }
 }
+
+export async function generateEmailReport(scans: { competitor: string, summary: string, changes: string[], impactScore: number }[]): Promise<string> {
+    const prompt = `
+    You are writing a "Daily Competitor Intelligence Brief" email for stakeholders.
+    
+    Here are the results of today's monitoring scan:
+
+    ${JSON.stringify(scans, null, 2)}
+
+    Task: Write a professional, concise, and insightful executive summary email in HTML format.
+    
+    Structure:
+    1. <h1>Title</h1> (Daily Competitor Intelligence Brief - [Date])
+    2. <h2>Executive Summary</h2> (1 paragraph regarding the most important updates)
+    3. <h2>Competitor Updates</h2> (Iterate over the meaningful updates. Group by competitor. Use bullet points).
+    4. If there are no major changes, mention that the landscape is stable.
+    
+    Style:
+    - Clean, modern HTML with inline CSS.
+    - Use specific details from the changes detected.
+    - Highlight high-impact (score > 6) changes in red or bold.
+    - Do NOT include markdown code blocks (like \`\`\`html), just return the raw HTML string start to finish.
+    `;
+
+    try {
+        const result = await ai.models.generateContent({
+          model: MODEL_NAME,
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        });
+    
+        const text = result.text;
+        if (!text) return '<p>Failed to generate report.</p>';
+        
+        // Cleanup if model returns markdown block
+        return text.replace(/```html|```/g, '');
+
+    } catch (error) {
+        console.error("Report generation failed:", error);
+        return '<p>Error generating report.</p>';
+    }
+}

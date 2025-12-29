@@ -28,6 +28,12 @@ export function AppSidebar() {
       href: '/logs',
       active: pathname === '/logs',
     },
+    {
+      label: 'Email History',
+      icon: FileText,
+      href: '/emails',
+      active: pathname === '/emails',
+    },
   ];
 
   return (

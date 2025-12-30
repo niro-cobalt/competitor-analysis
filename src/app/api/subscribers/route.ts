@@ -36,3 +36,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Failed to add subscriber' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { email } = await req.json();
+    if (!email) {
+      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    }
+
+    await connectToDatabase();
+    await Subscriber.deleteOne({ email });
+    
+    return NextResponse.json({ message: 'Subscriber removed' });
+  } catch (error) {
+    console.error('Failed to remove subscriber:', error);
+    return NextResponse.json({ error: 'Failed to remove subscriber' }, { status: 500 });
+  }
+}

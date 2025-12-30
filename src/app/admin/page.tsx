@@ -14,7 +14,7 @@ interface Subscriber {
   createdAt: string;
 }
 
-import { ShieldCheck, UserPlus, Users } from 'lucide-react';
+import { ShieldCheck, UserPlus, Users, Trash2 } from 'lucide-react';
 
 export default function AdminPage() {
   const [email, setEmail] = useState('');
@@ -59,6 +59,27 @@ export default function AdminPage() {
       toast.error('Error subscribing');
     }
   }; 
+
+  const handleDelete = async (email: string) => {
+    if (!confirm(`Are you sure you want to remove ${email}?`)) return;
+
+    try {
+        const res = await fetch('/api/subscribers', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
+
+        if (res.ok) {
+            toast.success('Subscriber removed');
+            fetchSubscribers();
+        } else {
+            toast.error('Failed to remove subscriber');
+        }
+    } catch (error) {
+        toast.error('Error removing subscriber');
+    }
+  };
 
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
@@ -109,6 +130,7 @@ export default function AdminPage() {
                             <TableRow className="hover:bg-transparent border-white/10">
                                 <TableHead className="text-foreground/80 font-semibold h-10 text-xs uppercase tracking-wider">Email</TableHead>
                                 <TableHead className="text-right text-foreground/80 font-semibold h-10 text-xs uppercase tracking-wider">Joined</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -118,11 +140,21 @@ export default function AdminPage() {
                                     <TableCell className="text-right text-muted-foreground text-xs py-2.5">
                                         {format(new Date(sub.createdAt), 'MMM d, yyyy')}
                                     </TableCell>
+                                    <TableCell className="text-right py-2.5">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                            onClick={() => handleDelete(sub.email)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                             {subscribers.length === 0 && !loading && (
                                 <TableRow>
-                                    <TableCell colSpan={2} className="text-center h-24 text-muted-foreground text-sm">
+                                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground text-sm">
                                         No subscribers yet.
                                     </TableCell>
                                 </TableRow>

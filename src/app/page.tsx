@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AddCompetitorDialog } from '@/components/AddCompetitorDialog';
+import { ManageSubscribersDialog } from '@/components/ManageSubscribersDialog';
 import { CompetitorCard } from '@/components/CompetitorCard';
 import { Toaster } from 'sonner';
 
@@ -109,7 +110,9 @@ export default function Dashboard() {
             <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl text-foreground drop-shadow-md">Competitor Watch</h1>
             <p className="text-muted-foreground mt-1 text-base font-medium">Track competitor updates with Gemini AI.</p>
           </div>
+
           <div className="flex items-center gap-3">
+            <ManageSubscribersDialog />
             <Button 
                 onClick={handleScanAll} 
                 disabled={scanningAll} 
@@ -122,8 +125,8 @@ export default function Dashboard() {
                     </>
                 ) : (
                     <>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Scan All
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Scan All
                     </>
                 )}
             </Button>

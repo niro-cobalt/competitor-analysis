@@ -33,7 +33,9 @@ export async function POST() {
                     competitor: competitor.name,
                     summary: result.summary,
                     changes: result.changesDetected || [],
-                    impactScore: result.impactScore || 0
+                    impactScore: result.impactScore || 0,
+                    newsSummary: result.newsSummary,
+                    newsItems: result.newsItems
                 });
 
                 return { competitor: competitor.name, status: 'success', scanId: result._id };
@@ -59,7 +61,7 @@ export async function POST() {
         const emailHtml = await generateEmailReport(emailData);
         console.log("Sending email...");
         
-        const subject = `Competitor Update - ${new Date().toLocaleDateString()}`;
+        const subject = `Competitor Update - ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
         
         // Fetch subscribers
         // Dynamically import to avoid circular dep if any, though unlikely.

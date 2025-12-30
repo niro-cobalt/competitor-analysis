@@ -99,7 +99,65 @@ export async function analyzeCompetitorUpdate(
   }
 }
 
-export async function generateEmailReport(scans: { competitor: string, summary: string, changes: string[], impactScore: number }[]): Promise<string> {
+const NewsSearchSchema = z.object({
+  summary: z.string(),
+  newsItems: z.array(z.string()),
+});
+
+export type NewsSearchResult = z.infer<typeof NewsSearchSchema>;
+
+export async function searchCompetitorNews(competitorName: string): Promise<NewsSearchResult> {
+  const prompt = `
+  You are a competitive intelligence analyst.
+  Find the latest meaningful news, press releases, and major announcements for: ${competitorName}.
+  
+  Focus on:
+  - Strategic partnerships
+  - New product launches
+  - Funding rounds or acquisitions
+  - Leadership changes
+  - Major legal or regulatory news
+
+  Ignore:
+  - Generic marketing SEO fluff
+  - Minor bug fixes or changelogs
+  - Stock market daily fluctuations unless extreme
+
+  Output a strictly valid JSON object matching this schema:
+  {
+    "summary": "Concise summary of recent news (last 30 days) or 'No significant recent news found' if quiet.",
+    "newsItems": ["Headline 1 - Date", "Headline 2 - Date"]
+  }
+  `;
+
+  try {
+    const result = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: 'application/json',
+        tools: [{ googleSearch: {} }] // Enable Google Search Grounding
+      }
+    });
+
+    console.log(`News search for ${competitorName}:`, result.text);
+
+    if (!result.text) {
+        return { summary: "No news found (empty response)", newsItems: [] };
+    }
+
+    const parsedJson = JSON.parse(result.text);
+    return NewsSearchSchema.parse(parsedJson);
+
+  } catch (error) {
+    console.error(`Values search failed for ${competitorName}:`, error);
+    // Fail gracefully
+    return { summary: "Failed to fetch news", newsItems: [] };
+  }
+}
+
+
+export async function generateEmailReport(scans: { competitor: string, summary: string, changes: string[], impactScore: number, newsSummary?: string, newsItems?: string[] }[]): Promise<string> {
     const prompt = `
     You are writing a "Daily Competitor Intelligence Brief" email for stakeholders.
     
@@ -109,7 +167,11 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
 
     Task: Write a professional, concise, and insightful executive summary email in HTML format.
     
-    CRITICAL REQUIREMENT: You MUST include a section that lists EVERY SINGLE competitor scanned, even if there were no updates.
+    CRITICAL REQUIREMENT: 
+    1. You MUST include a section that lists EVERY SINGLE competitor scanned.
+    2. Start each competitor's section with their "News Summary" if significant news exists using the "newsSummary" field. This is HIGH PRIORITY. 
+    3. If there is news, list the "newsItems" as bullet points.
+    4. Then display the website scan updates.
     
     Structure:
     1. Header: "Daily Competitor Intelligence Brief" with today's date.

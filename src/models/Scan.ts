@@ -7,6 +7,8 @@ export interface IScan extends Document {
   summary: string;
   changesDetected: string[]; // Array of strings describing changes
   impactScore: number;
+  newsSummary?: string;
+  newsItems?: string[];
 }
 
 const ScanSchema: Schema = new Schema({
@@ -15,7 +17,9 @@ const ScanSchema: Schema = new Schema({
   rawContent: { type: String }, // Can be large, maybe we truncate? 
   summary: { type: String },
   changesDetected: { type: [String], default: [] },
-  impactScore: { type: Number, default: 0 }
+  impactScore: { type: Number, default: 0 },
+  newsSummary: { type: String, default: '' },
+  newsItems: { type: [String], default: [] }
 }, { 
   timestamps: true 
 });

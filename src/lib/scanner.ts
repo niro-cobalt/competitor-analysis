@@ -1,7 +1,7 @@
 import connectToDatabase from '@/lib/db';
 import Competitor from '@/models/Competitor';
 import Scan from '@/models/Scan';
-import { analyzeCompetitorUpdate } from '@/lib/gemini';
+import { analyzeCompetitorUpdate, searchCompetitorNews } from '@/lib/gemini';
 
 export async function scanCompetitor(competitorId: string) {
   try {
@@ -74,12 +74,15 @@ export async function scanCompetitor(competitorId: string) {
     // 2. Get previous scan
     const lastScan = await Scan.findOne({ competitorId }).sort({ createdAt: -1 });
 
-    // 3. Analyze with Gemini
-    const analysis = await analyzeCompetitorUpdate(
-      competitor.name, 
-      textContent, 
-      lastScan ? lastScan.rawContent : null
-    );
+    // 3. Analyze with Gemini (Website Content)
+    const [analysis, newsAnalysis] = await Promise.all([
+        analyzeCompetitorUpdate(
+            competitor.name, 
+            textContent, 
+            lastScan ? lastScan.rawContent : null
+        ),
+        searchCompetitorNews(competitor.name)
+    ]);
 
     // 4. Save Scan
     const newScan = await Scan.create({
@@ -87,7 +90,9 @@ export async function scanCompetitor(competitorId: string) {
       rawContent: textContent,
       summary: analysis.summary,
       changesDetected: analysis.changes || [],
-      impactScore: analysis.impact_score || 0
+      impactScore: analysis.impact_score || 0,
+      newsSummary: newsAnalysis.summary,
+      newsItems: newsAnalysis.newsItems,
     });
 
     // 5. Update Competitor last scanned time

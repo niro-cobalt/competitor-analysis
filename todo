@@ -3,12 +3,12 @@
 ✔ add sidebar @done(25-12-29 12:17)
 ✔ add test/debug page for manual execution @done(25-12-29 12:17)
 ✔ add history page for scans @done(25-12-29 12:17)
-☐ add trigger api from cron
-☐ add cron
+✔ add trigger api from cron @done(25-12-29 17:17)
+✔ add cron @done(25-12-29 17:17)
 ✔ add send email and format @done(25-12-29 12:47)
-☐ all competitors summary page
+✔ all competitors summary page @done(25-12-29 17:17)
 ✔ parallel scans @done(25-12-29 12:47)
 ✔ join the mailing list @done(25-12-29 12:48)
 ☐ kinde ?
 ✔ stylize the app @done(25-12-29 13:09)
-☐ send to list
+✔ send to list @done(25-12-29 17:17)

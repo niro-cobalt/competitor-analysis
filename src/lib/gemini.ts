@@ -174,7 +174,7 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
     4. Then display the website scan updates.
     
     Structure:
-    1. Header: "Daily Competitor Intelligence Brief" with today's date.
+    1. Header: "Daily Competitor Intelligence Brief". in the header.
     2. Executive Summary: High-level overview of the market landscape changes today.
     3. Major Updates (if any): Detailed breakdown of competitors with Impact Score > 0.
     4. Competitor Status Table: A table listing ALL competitors with columns: Name, Status (Updated/No Change), Impact Score.
@@ -203,7 +203,14 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
         if (!text) return '<p>Failed to generate report.</p>';
         
         // Cleanup if model returns markdown block
-        return text.replace(/```html|```/g, '');
+        const cleanHtml = text.replace(/```html|```/g, '');
+
+        // Programmatically inject the date into the header
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        
+        // Replace {{DATE}} with today's date
+        // Also fallback replace if LLM ignored instructions and put a random date, by looking for the Header logic
+        return cleanHtml.replace('{{DATE}}', today).replace(/Daily Competitor Intelligence Brief - (October|November|December|January|February|March|April|May|June|July|August|September) \d{1,2}, \d{4}/, `Daily Competitor Intelligence Brief - ${today}`);
 
     } catch (error) {
         console.error("Report generation failed:", error);

@@ -25,8 +25,8 @@ export async function scanCompetitor(competitorId: string) {
              const puppeteerCore = (await import('puppeteer-core')).default;
              
              // Check if specific version pack is needed, usually the package version matches
-             // Using a remote URL forces download to /tmp, bypassing node_modules issues
-             const executablePath = await chromium.executablePath("https://github.com/Sparticuz/chromium/releases/download/v132.0.0/chromium-v132.0.0-pack.tar");
+             // We rely on next.config.ts serverExternalPackages to bundle the local binary correctly now
+             const executablePath = await chromium.executablePath();
 
              browser = await puppeteerCore.launch({
                 args: chromium.args,

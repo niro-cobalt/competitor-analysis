@@ -99,6 +99,9 @@ export async function POST() {
                  
                  // Update global status just to indicate activity
                  emailStatus = 'processed';
+
+                 // Avoid Resend rate limit (2 req/sec)
+                 await new Promise(resolve => setTimeout(resolve, 600));
             }
         }
     }

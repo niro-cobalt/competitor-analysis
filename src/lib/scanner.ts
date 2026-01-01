@@ -11,64 +11,39 @@ export async function scanCompetitor(competitorId: string) {
       throw new Error('Competitor not found');
     }
 
-    console.log(`Scanning URL with Puppeteer: ${competitor.url}`);
+    console.log(`Scanning URL with Jina Reader: ${competitor.url}`);
 
-    // 1. Fetch current content using Puppeteer
+    // 1. Fetch current content using Jina Reader (returns Markdown)
     let textContent = '';
-    let browser: any = null;
-
+    
     try {
-        if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
-             // Production (Vercel)
-             console.log("Running in production (Vercel) mode...");
-             const chromium = (await import('@sparticuz/chromium')).default;
-             const puppeteerCore = (await import('puppeteer-core')).default;
-             
-             // Check if specific version pack is needed, usually the package version matches
-             // Using a remote URL forces download to /tmp, bypassing node_modules issues
-             // Sequential execution in route.ts prevents ETXTBSY errors here
-             const executablePath = await chromium.executablePath("https://github.com/Sparticuz/chromium/releases/download/v132.0.0/chromium-v132.0.0-pack.tar");
+        const jinaUrl = `https://r.jina.ai/${competitor.url}`;
+        
+        const headers: Record<string, string> = {
+            'X-Target-Selector': 'body', // Optional hint to Jina
+        };
 
-             browser = await puppeteerCore.launch({
-                args: chromium.args,
-                defaultViewport: { width: 1920, height: 1080 },
-                executablePath: executablePath,
-                headless: true,
-             });
-
-        } else {
-            // Local Development
-             console.log("Running in local development mode...");
-             const puppeteer = (await import('puppeteer')).default;
-             browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-             });
+        if (process.env.JINA_API_KEY) {
+            headers['Authorization'] = `Bearer ${process.env.JINA_API_KEY}`;
         }
-    
-      const page = await browser.newPage();
-      
-      // Set a real user agent
-      await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      
-      // Navigate
-      await page.goto(competitor.url, { waitUntil: 'networkidle2', timeout: 60000 });
-      
-      // Extract text
-      textContent = await page.evaluate(() => {
-        const scripts = document.querySelectorAll('script, style, noscript');
-        scripts.forEach(el => el.remove());
-        return document.body.innerText.replace(/\s+/g, ' ').trim();
-      });
-      
+
+        const response = await fetch(jinaUrl, {
+            headers: headers,
+            next: { revalidate: 0 } // Disable cache for fresh scans
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch page via Jina: ${response.status} ${response.statusText}`);
+        }
+
+        // Jina returns clean Markdown
+        textContent = await response.text();
+
     } catch (err: any) {
-      console.error('Puppeteer error:', err);
-      throw new Error(`Puppeteer failed: ${err.message}`);
-    } finally {
-        // Ensure browser is closed even if analyzeCompetitorUpdate fails later
-        if (browser) await browser.close();
+        console.error('Scraping error:', err);
+        throw new Error(`Scraping failed: ${err.message}`);
     }
-    
+
     if (!textContent) {
        throw new Error('Failed to extract any content from the page.');
     }

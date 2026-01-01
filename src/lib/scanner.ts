@@ -24,13 +24,14 @@ export async function scanCompetitor(competitorId: string) {
              const chromium = (await import('@sparticuz/chromium')).default;
              const puppeteerCore = (await import('puppeteer-core')).default;
              
-             // Optional: Load local font support if necessary for screenshots, but for text it's fine without
-             // await chromium.font('...');
+             // Check if specific version pack is needed, usually the package version matches
+             // Using a remote URL forces download to /tmp, bypassing node_modules issues
+             const executablePath = await chromium.executablePath("https://github.com/Sparticuz/chromium/releases/download/v132.0.0/chromium-v132.0.0-pack.tar");
 
              browser = await puppeteerCore.launch({
                 args: chromium.args,
                 defaultViewport: { width: 1920, height: 1080 },
-                executablePath: await chromium.executablePath(),
+                executablePath: executablePath,
                 headless: true,
              });
 

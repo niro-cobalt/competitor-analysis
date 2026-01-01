@@ -16,8 +16,9 @@ export async function POST() {
       return NextResponse.json({ message: 'No competitors found to scan' });
     }
 
-    // Limit concurrency to 5
-    const limit = pLimit(5);
+    // Limit concurrency to 1 to avoid ETXTBSY errors with Puppeteer binary download
+    // This effectively makes it sequential but cleaner than a for loop refactor
+    const limit = pLimit(1);
 
     const emailData: any[] = [];
     

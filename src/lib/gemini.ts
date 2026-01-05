@@ -41,7 +41,8 @@ export type CompetitorAnalysis = z.infer<typeof CompetitorAnalysisSchema>;
 export async function analyzeCompetitorUpdate(
   competitorName: string,
   newContent: string,
-  oldContent: string | null
+  oldContent: string | null,
+  instructions?: string
 ): Promise<CompetitorAnalysis> {
 
   let prompt = `You are a competitive intelligence analyst.
@@ -52,6 +53,15 @@ export async function analyzeCompetitorUpdate(
   Current Content:
   ${newContent.substring(0, 20000)} ... [truncated]
   `;
+
+  if (instructions) {
+      prompt += `
+      SPECIAL INSTRUCTIONS FOR THIS COMPETITOR:
+      ${instructions}
+      
+      Strictly follow the above instructions when analyzing changes.
+      `;
+  }
 
   if (oldContent) {
     prompt += `

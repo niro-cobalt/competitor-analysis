@@ -56,7 +56,8 @@ export async function scanCompetitor(competitorId: string) {
         analyzeCompetitorUpdate(
             competitor.name, 
             textContent, 
-            lastScan ? lastScan.rawContent : null
+            lastScan ? lastScan.rawContent : null,
+            competitor.instructions
         ),
         searchCompetitorNews(competitor.name)
     ]);

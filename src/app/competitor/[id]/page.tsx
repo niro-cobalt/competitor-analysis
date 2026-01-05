@@ -23,6 +23,7 @@ interface Scan {
   summary: string;
   changesDetected: string[];
   impactScore: number;
+  status?: string;
 }
 
 export default function CompetitorDetails() {
@@ -45,7 +46,9 @@ export default function CompetitorDetails() {
           setCompetitor(await compRes.json());
         }
         if (scansRes.ok) {
-          setScans(await scansRes.json());
+          const allScans: Scan[] = await scansRes.json();
+          // Filter out failed scans for the history view
+          setScans(allScans.filter(s => s.status !== 'failed'));
         }
       } catch (e) {
         console.error(e);

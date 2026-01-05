@@ -4,15 +4,15 @@ import Scan from '@/models/Scan';
 import { analyzeCompetitorUpdate, searchCompetitorNews } from '@/lib/gemini';
 
 export async function scanCompetitor(competitorId: string) {
+  const startTime = Date.now();
+  await connectToDatabase();
+  
+  const competitor = await Competitor.findById(competitorId);
+  if (!competitor) {
+    throw new Error('Competitor not found');
+  }
+
   try {
-    await connectToDatabase();
-    const competitor = await Competitor.findById(competitorId);
-    if (!competitor) {
-      throw new Error('Competitor not found');
-    }
-
-    console.log(`Scanning URL with Jina Reader: ${competitor.url}`);
-
     // 1. Fetch current content using Jina Reader (returns Markdown)
     let textContent = '';
     
@@ -40,12 +40,12 @@ export async function scanCompetitor(competitorId: string) {
         textContent = await response.text();
 
     } catch (err: any) {
-        console.error('Scraping error:', err);
-        throw new Error(`Scraping failed: ${err.message}`);
+        console.warn(`Primary scan failed for ${competitor.url}`, err);
+        throw new Error(`Failed to scan website: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
 
-    if (!textContent) {
-       throw new Error('Failed to extract any content from the page.');
+    if (!textContent || textContent.length < 50) {
+       throw new Error('Failed to extract sufficient content from the page.');
     }
 
     // 2. Fetch Social Content (Parallel)
@@ -100,6 +100,8 @@ export async function scanCompetitor(competitorId: string) {
         searchCompetitorNews(competitor.name)
     ]);
 
+    const durationMs = Date.now() - startTime;
+
     // 5. Save Scan
     const newScan = await Scan.create({
       competitorId: competitor._id,
@@ -111,16 +113,28 @@ export async function scanCompetitor(competitorId: string) {
       impactScore: analysis.impact_score || 0,
       newsSummary: newsAnalysis.summary,
       newsItems: newsAnalysis.newsItems,
+      status: 'success',
+      durationMs
     });
 
-    // 5. Update Competitor last scanned time
-    competitor.lastScannedAt = new Date();
-    await competitor.save();
+    // Update competitor last scanned time
+    await Competitor.findByIdAndUpdate(competitorId, { lastScannedAt: new Date() });
 
     return newScan;
 
   } catch (error) {
-    console.error(`Scan failed for competitor ${competitorId}:`, error);
-    throw error;
+    console.error(`Scan failed for ${competitor.name}:`, error);
+    const durationMs = Date.now() - startTime;
+    
+    // Save failed scan record
+    await Scan.create({
+        competitorId: competitor._id,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        durationMs,
+        scannedAt: new Date()
+    });
+
+    throw error; // Re-throw to handle in API
   }
 }

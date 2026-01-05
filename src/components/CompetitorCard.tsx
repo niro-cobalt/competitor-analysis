@@ -9,6 +9,14 @@ import { EditCompetitorDialog } from '@/components/EditCompetitorDialog';
 import { Loader2, RefreshCw, Zap, ArrowUpRight, Linkedin, FileText, Info, Pencil } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
+// Custom X icon component since generic Lucide might vary or user wants specific branding
+const XIcon = ({ className }: { className?: string }) => (
+  <svg role="img" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <title>X</title>
+    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
+  </svg>
+);
+
 
 interface Competitor {
   _id: string;
@@ -16,6 +24,7 @@ interface Competitor {
   url: string;
   logo?: string;
   linkedinUrl?: string;
+  twitterUrl?: string;
   instructions?: string;
   lastScannedAt?: string;
   updatedAt: string;
@@ -87,6 +96,12 @@ export function CompetitorCard({ competitor, onScanComplete }: CompetitorCardPro
                  {competitor.linkedinUrl && (
                      <a href={competitor.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-[#0077b5] transition-colors">
                          <Linkedin className="h-3.5 w-3.5" />
+                     </a>
+                 )}
+
+                 {competitor.twitterUrl && (
+                     <a href={competitor.twitterUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                         <XIcon className="h-3 w-3" />
                      </a>
                  )}
              </div>

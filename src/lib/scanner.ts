@@ -48,43 +48,54 @@ export async function scanCompetitor(competitorId: string) {
        throw new Error('Failed to extract any content from the page.');
     }
 
-    // 2. Fetch LinkedIn content if available (Parallel)
+    // 2. Fetch Social Content (Parallel)
     let linkedinContent = '';
+    let twitterContent = '';
+    
+    const socialPromises: Promise<void>[] = [];
+
     if (competitor.linkedinUrl) {
-         try {
-            console.log(`Scanning LinkedIn with Jina Reader: ${competitor.linkedinUrl}`);
-            const jinaUrl = `https://r.jina.ai/${competitor.linkedinUrl}`;
-             const headers: Record<string, string> = {};
-            if (process.env.JINA_API_KEY) {
-                headers['Authorization'] = `Bearer ${process.env.JINA_API_KEY}`;
+        socialPromises.push((async () => {
+            try {
+                console.log(`Scanning LinkedIn: ${competitor.linkedinUrl}`);
+                const jinaUrl = `https://r.jina.ai/${competitor.linkedinUrl}`;
+                const headers: Record<string, string> = process.env.JINA_API_KEY ? { 'Authorization': `Bearer ${process.env.JINA_API_KEY}` } : {};
+                const res = await fetch(jinaUrl, { headers, next: { revalidate: 0 } });
+                if (res.ok) linkedinContent = await res.text();
+            } catch (e) {
+                console.warn('LinkedIn scraping failed', e);
             }
-
-            const response = await fetch(jinaUrl, {
-                headers: headers,
-                next: { revalidate: 0 }
-            });
-
-            if (response.ok) {
-                linkedinContent = await response.text();
-            } else {
-                 console.warn(`Failed to fetch LinkedIn page: ${response.status}`);
-            }
-         } catch (err) {
-             console.warn('LinkedIn scraping failed:', err);
-         }
+        })());
     }
+
+    if (competitor.twitterUrl) {
+        socialPromises.push((async () => {
+            try {
+                console.log(`Scanning Twitter: ${competitor.twitterUrl}`);
+                const jinaUrl = `https://r.jina.ai/${competitor.twitterUrl}`;
+                const headers: Record<string, string> = process.env.JINA_API_KEY ? { 'Authorization': `Bearer ${process.env.JINA_API_KEY}` } : {};
+                const res = await fetch(jinaUrl, { headers, next: { revalidate: 0 } });
+                if (res.ok) twitterContent = await res.text();
+            } catch (e) {
+                console.warn('Twitter scraping failed', e);
+            }
+        })());
+    }
+
+    await Promise.all(socialPromises);
 
     // 3. Get previous scan
     const lastScan = await Scan.findOne({ competitorId }).sort({ createdAt: -1 });
 
-    // 4. Analyze with Gemini (Website + LinkedIn Content)
+    // 4. Analyze with Gemini (Website + Social Content)
     const [analysis, newsAnalysis] = await Promise.all([
         analyzeCompetitorUpdate(
             competitor.name, 
             textContent, 
             lastScan ? lastScan.rawContent : null,
             competitor.instructions,
-            linkedinContent
+            linkedinContent,
+            twitterContent
         ),
         searchCompetitorNews(competitor.name)
     ]);
@@ -93,7 +104,8 @@ export async function scanCompetitor(competitorId: string) {
     const newScan = await Scan.create({
       competitorId: competitor._id,
       rawContent: textContent,
-      linkedinContent: linkedinContent,
+      linkedinContent,
+      twitterContent,
       summary: analysis.summary,
       changesDetected: analysis.changes || [],
       impactScore: analysis.impact_score || 0,

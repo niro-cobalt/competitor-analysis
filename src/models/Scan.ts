@@ -5,6 +5,7 @@ export interface IScan extends Document {
   scannedAt: Date;
   rawContent: string;
   linkedinContent?: string;
+  twitterContent?: string;
   summary: string;
   changesDetected: string[]; // Array of strings describing changes
   impactScore: number;

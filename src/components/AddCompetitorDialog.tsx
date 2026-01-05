@@ -17,6 +17,7 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [twitterUrl, setTwitterUrl] = useState('');
   const [instructions, setInstructions] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,7 +28,7 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
       const res = await fetch('/api/competitors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, url, linkedinUrl, instructions }),
+        body: JSON.stringify({ name, url, linkedinUrl, twitterUrl, instructions }),
       });
 
       if (!res.ok) throw new Error('Failed to add competitor');
@@ -37,6 +38,7 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
       setName('');
       setUrl('');
       setLinkedinUrl('');
+      setTwitterUrl('');
       setInstructions('');
       onCompetitorAdded();
     } catch (error) {
@@ -86,6 +88,16 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
               placeholder="https://linkedin.com/company/example" 
               value={linkedinUrl} 
               onChange={(e) => setLinkedinUrl(e.target.value)} 
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="twitterUrl">X URL (Optional)</Label>
+            <Input 
+              id="twitterUrl" 
+              type="url" 
+              placeholder="https://x.com/example" 
+              value={twitterUrl} 
+              onChange={(e) => setTwitterUrl(e.target.value)} 
             />
           </div>
           <div className="space-y-2">

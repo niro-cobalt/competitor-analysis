@@ -28,12 +28,13 @@ export async function PATCH(
     const body = await req.json();
     
     // Whitelist allowed fields for update
-    const { name, url, linkedinUrl, instructions } = body;
+    const { name, url, linkedinUrl, twitterUrl, instructions } = body;
     const updateData: any = {};
     
     if (name !== undefined) updateData.name = name;
     if (url !== undefined) updateData.url = url;
     if (linkedinUrl !== undefined) updateData.linkedinUrl = linkedinUrl;
+    if (twitterUrl !== undefined) updateData.twitterUrl = twitterUrl;
     if (instructions !== undefined) updateData.instructions = instructions;
 
     await connectToDatabase();

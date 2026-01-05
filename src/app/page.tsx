@@ -12,6 +12,7 @@ interface Competitor {
   url: string;
   logo?: string;
   linkedinUrl?: string;
+  twitterUrl?: string;
   instructions?: string;
   lastScannedAt?: string;
   updatedAt: string;
@@ -47,6 +48,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [scanningAll, setScanningAll] = useState(false);
   const [latestEmail, setLatestEmail] = useState<EmailLog | null>(null);
+
+  console.log("competitors", competitors);
 
   const fetchCompetitors = async () => {
     try {

@@ -13,6 +13,7 @@ interface Competitor {
     name: string;
     url: string;
     linkedinUrl?: string;
+    twitterUrl?: string;
     instructions?: string;
 }
 
@@ -27,6 +28,7 @@ export function EditCompetitorDialog({ competitor, onCompetitorUpdated }: EditCo
   const [name, setName] = useState(competitor.name);
   const [url, setUrl] = useState(competitor.url);
   const [linkedinUrl, setLinkedinUrl] = useState(competitor.linkedinUrl || '');
+  const [twitterUrl, setTwitterUrl] = useState(competitor.twitterUrl || '');
   const [instructions, setInstructions] = useState(competitor.instructions || '');
 
   // Reset form when dialog opens/competitor changes
@@ -35,6 +37,7 @@ export function EditCompetitorDialog({ competitor, onCompetitorUpdated }: EditCo
           setName(competitor.name);
           setUrl(competitor.url);
           setLinkedinUrl(competitor.linkedinUrl || '');
+          setTwitterUrl(competitor.twitterUrl || '');
           setInstructions(competitor.instructions || '');
       }
   }, [open, competitor]);
@@ -47,7 +50,7 @@ export function EditCompetitorDialog({ competitor, onCompetitorUpdated }: EditCo
       const res = await fetch(`/api/competitors/${competitor._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, url, linkedinUrl, instructions }),
+        body: JSON.stringify({ name, url, linkedinUrl, twitterUrl, instructions }),
       });
 
       if (!res.ok) throw new Error('Failed to update competitor');
@@ -107,6 +110,16 @@ export function EditCompetitorDialog({ competitor, onCompetitorUpdated }: EditCo
               placeholder="https://linkedin.com/company/example" 
               value={linkedinUrl} 
               onChange={(e) => setLinkedinUrl(e.target.value)} 
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-twitterUrl">X URL (Optional)</Label>
+            <Input 
+              id="edit-twitterUrl" 
+              type="url" 
+              placeholder="https://x.com/example" 
+              value={twitterUrl} 
+              onChange={(e) => setTwitterUrl(e.target.value)} 
             />
           </div>
           <div className="space-y-2">

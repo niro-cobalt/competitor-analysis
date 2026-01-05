@@ -22,26 +22,31 @@ try {
    Fill in the details for the competitors you want to update.
    Leave fields as undefined or null if you don't want to update them.
 */
-const UPDATES: Record<string, { linkedinUrl?: string, instructions?: string }> = {
+const UPDATES: Record<string, { linkedinUrl?: string, twitterUrl?: string,   instructions?: string }> = {
   "Blitzy": {
     linkedinUrl: "https://www.linkedin.com/company/blitzyai",
+    twitterUrl: "https://x.com/blitzyai/",
     instructions: "Focus on AI feature releases, and if they are moving from being a coding assistant to adding capabilities around architecture of applications."
   },
   "Tweezr": {
     linkedinUrl: "https://www.linkedin.com/company/tweezr",
+    twitterUrl: "",
     instructions: "look for new features and capabilities. Look for conferences and events."
   },
   "Hypercubic": {
     linkedinUrl: "https://www.linkedin.com/company/hypercubic-ai",
+    twitterUrl: "",
     instructions: ""
   },
   "replai": {
     linkedinUrl: "https://www.linkedin.com/company/replaiai",
+    twitterUrl: "",
     instructions: ""
   },
   "dynatrace": {
-    linkedinUrl: "https://www.linkedin.com/company/replaiai",
-    instructions: ""
+    linkedinUrl: "https://www.linkedin.com/company/dynatrace",
+    twitterUrl: "https://x.com/Dynatrace",
+    instructions: "look for any conferences they attend, sponsor./n Look for new features"
   }
 };
 
@@ -52,6 +57,7 @@ async function main() {
   for (const [name, data] of Object.entries(UPDATES)) {
       const updateData: any = {};
       if (data.linkedinUrl) updateData.linkedinUrl = data.linkedinUrl;
+      if (data.twitterUrl) updateData.twitterUrl = data.twitterUrl;
       if (data.instructions) updateData.instructions = data.instructions;
 
       if (Object.keys(updateData).length === 0) {

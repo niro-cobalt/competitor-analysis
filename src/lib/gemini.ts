@@ -42,7 +42,8 @@ export async function analyzeCompetitorUpdate(
   competitorName: string,
   newContent: string,
   oldContent: string | null,
-  instructions?: string
+  instructions?: string,
+  linkedinContent?: string
 ): Promise<CompetitorAnalysis> {
 
   let prompt = `You are a competitive intelligence analyst.
@@ -50,9 +51,17 @@ export async function analyzeCompetitorUpdate(
   
   Here is the text content from their website (scraped).
   
-  Current Content:
-  ${newContent.substring(0, 20000)} ... [truncated]
+  Current Website Content:
+  ${newContent.substring(0, 15000)} ... [truncated]
   `;
+
+  if (linkedinContent) {
+      prompt += `
+      
+      LinkedIn Page Content:
+      ${linkedinContent.substring(0, 10000)} ... [truncated]
+      `;
+  }
 
   if (instructions) {
       prompt += `
@@ -74,6 +83,7 @@ export async function analyzeCompetitorUpdate(
     2. Pricing updates
     3. Messaging shifts
     4. New product announcements
+    5. Notable updates from their LinkedIn page
     
     Ignore trivial changes like timestamps, copyright dates, or dynamic dynamic feed items (like random blog posts) unless they signal a major strategic shift.
     

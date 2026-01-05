@@ -48,24 +48,52 @@ export async function scanCompetitor(competitorId: string) {
        throw new Error('Failed to extract any content from the page.');
     }
 
-    // 2. Get previous scan
+    // 2. Fetch LinkedIn content if available (Parallel)
+    let linkedinContent = '';
+    if (competitor.linkedinUrl) {
+         try {
+            console.log(`Scanning LinkedIn with Jina Reader: ${competitor.linkedinUrl}`);
+            const jinaUrl = `https://r.jina.ai/${competitor.linkedinUrl}`;
+             const headers: Record<string, string> = {};
+            if (process.env.JINA_API_KEY) {
+                headers['Authorization'] = `Bearer ${process.env.JINA_API_KEY}`;
+            }
+
+            const response = await fetch(jinaUrl, {
+                headers: headers,
+                next: { revalidate: 0 }
+            });
+
+            if (response.ok) {
+                linkedinContent = await response.text();
+            } else {
+                 console.warn(`Failed to fetch LinkedIn page: ${response.status}`);
+            }
+         } catch (err) {
+             console.warn('LinkedIn scraping failed:', err);
+         }
+    }
+
+    // 3. Get previous scan
     const lastScan = await Scan.findOne({ competitorId }).sort({ createdAt: -1 });
 
-    // 3. Analyze with Gemini (Website Content)
+    // 4. Analyze with Gemini (Website + LinkedIn Content)
     const [analysis, newsAnalysis] = await Promise.all([
         analyzeCompetitorUpdate(
             competitor.name, 
             textContent, 
             lastScan ? lastScan.rawContent : null,
-            competitor.instructions
+            competitor.instructions,
+            linkedinContent
         ),
         searchCompetitorNews(competitor.name)
     ]);
 
-    // 4. Save Scan
+    // 5. Save Scan
     const newScan = await Scan.create({
       competitorId: competitor._id,
       rawContent: textContent,
+      linkedinContent: linkedinContent,
       summary: analysis.summary,
       changesDetected: analysis.changes || [],
       impactScore: analysis.impact_score || 0,

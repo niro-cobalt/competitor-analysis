@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { name, url, instructions } = await req.json();
+    const { name, url, linkedinUrl, instructions } = await req.json();
     if (!name || !url) {
       return NextResponse.json({ error: 'Name and URL are required' }, { status: 400 });
     }
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
         console.warn('Could not parse hostname for logo', e);
     }
 
-    const competitor = await Competitor.create({ name, url, logo, instructions });
+    const competitor = await Competitor.create({ name, url, linkedinUrl, logo, instructions });
     return NextResponse.json(competitor, { status: 201 });
   } catch (error) {
     console.error('Failed to create competitor:', error);

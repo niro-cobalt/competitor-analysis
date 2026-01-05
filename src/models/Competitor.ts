@@ -4,6 +4,7 @@ export interface ICompetitor extends Document {
   name: string;
   url: string;
   logo?: string;
+  linkedinUrl?: string;
   instructions?: string;
   lastScannedAt?: Date;
   createdAt: Date;
@@ -14,6 +15,7 @@ const CompetitorSchema: Schema = new Schema({
   name: { type: String, required: true },
   url: { type: String, required: true, unique: true },
   logo: { type: String },
+  linkedinUrl: { type: String },
   instructions: { type: String },
   lastScannedAt: { type: Date },
 }, { 

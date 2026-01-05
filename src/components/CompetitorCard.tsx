@@ -5,14 +5,18 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, RefreshCw, Zap, ArrowUpRight } from 'lucide-react';
+import { EditCompetitorDialog } from '@/components/EditCompetitorDialog';
+import { Loader2, RefreshCw, Zap, ArrowUpRight, Linkedin, FileText, Info, Pencil } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+
 
 interface Competitor {
   _id: string;
   name: string;
   url: string;
   logo?: string;
+  linkedinUrl?: string;
+  instructions?: string;
   lastScannedAt?: string;
   updatedAt: string;
 }
@@ -75,26 +79,48 @@ export function CompetitorCard({ competitor, onScanComplete }: CompetitorCardPro
                 </span>
             </div>
             
-             <a href={competitor.url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary truncate w-fit block transition-colors">
-                {competitor.url}
-             </a>
+             <div className="flex items-center gap-3 mt-1">
+                 <a href={competitor.url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary truncate transition-colors flex items-center gap-1">
+                    {new URL(competitor.url).hostname}
+                 </a>
+                 
+                 {competitor.linkedinUrl && (
+                     <a href={competitor.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-[#0077b5] transition-colors">
+                         <Linkedin className="h-3.5 w-3.5" />
+                     </a>
+                 )}
+             </div>
+
+             {competitor.instructions && (
+                 <div className="mt-2 flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/30 p-2 rounded-md border border-white/5">
+                    <FileText className="h-3 w-3 shrink-0 text-amber-500/70 mt-0.5" />
+                    <div>Instructions:</div>
+                    <div className="line-clamp-2 leading-relaxed">{competitor.instructions}</div>
+                 </div>
+             )}
         </div>
 
         {/* Actions - Compact */}
-         <Button 
-            onClick={handleScan} 
-            disabled={scanning} 
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8 shrink-0 rounded-full hover:bg-primary/20 text-muted-foreground hover:text-primary"
-            title="Run Intelligence Scan"
-        >
-          {scanning ? (
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          ) : (
-                <RefreshCw className="h-4 w-4" />
-          )}
-        </Button>
+        <div className="flex items-center gap-1">
+             <EditCompetitorDialog 
+                competitor={competitor} 
+                onCompetitorUpdated={onScanComplete} 
+             />
+             <Button 
+                onClick={handleScan} 
+                disabled={scanning} 
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 shrink-0 rounded-full hover:bg-primary/20 text-muted-foreground hover:text-primary"
+                title="Run Intelligence Scan"
+            >
+              {scanning ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              ) : (
+                    <RefreshCw className="h-4 w-4" />
+              )}
+            </Button>
+        </div>
       </div>
     </Card>
   );

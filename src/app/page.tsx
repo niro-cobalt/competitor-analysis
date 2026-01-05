@@ -11,6 +11,8 @@ interface Competitor {
   name: string;
   url: string;
   logo?: string;
+  linkedinUrl?: string;
+  instructions?: string;
   lastScannedAt?: string;
   updatedAt: string;
 }

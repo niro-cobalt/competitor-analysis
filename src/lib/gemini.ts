@@ -360,3 +360,42 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
         return '<p>Error generating report. Please check the dashboard.</p>';
     }
 }
+
+export async function generateWeeklyReport(scans: { summary: string, changes: string[], date: Date }[]): Promise<string> {
+  const prompt = `
+  You are a competitive intelligence analyst.
+  Here are the updates from the last week for a specific competitor:
+  ${JSON.stringify(scans.map(s => ({
+      date: s.date,
+      summary: s.summary,
+      changes: s.changes
+  })), null, 2)}
+
+  Task: synthesize these updates into a concise "Weekly Summary".
+  
+  Requirements:
+  1. Focus on the most important strategic shifts (pricing, new features, message changes).
+  2. Ignore repetitive or minor updates.
+  3. If there were no meaningful updates, say "No significant updates this week."
+  4. Keep it under 50 words usually, unless there was a massive launch.
+  5. Output format: A single paragraph of plain text.
+  `;
+
+  try {
+      const result = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: 'text/plain',
+          temperature: 0.1
+        }
+      });
+  
+      const text = result.text;
+      return text || "No summary available.";
+
+  } catch (error) {
+      console.error("Weekly summary generation failed:", error);
+      return "Failed to generate summary.";
+  }
+}

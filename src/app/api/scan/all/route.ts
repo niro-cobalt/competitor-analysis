@@ -6,11 +6,26 @@ import { generateEmailReport } from '@/lib/gemini';
 import { sendEmail } from '@/lib/email';
 import EmailLog from '@/models/EmailLog';
 import pLimit from 'p-limit';
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { getUserOrganization } from '@/lib/utils';
+
+// Increase max duration to 5 minutes (300 seconds)
+export const maxDuration = 300; 
+export const dynamic = 'force-dynamic';
 
 export async function POST() {
   try {
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    const orgId = getUserOrganization(user);
+
+    if (!orgId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectToDatabase();
-    const competitors = await Competitor.find({});
+    // Only fetch competitors for this org
+    const competitors = await Competitor.find({ organizationId: orgId });
     
     if (competitors.length === 0) {
       return NextResponse.json({ message: 'No competitors found to scan' });
@@ -65,38 +80,36 @@ export async function POST() {
         
         const subject = `Competitor Update - ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
         
-        // Fetch subscribers
-        // Dynamically import to avoid circular dep if any, though unlikely.
+        // Fetch subscribers FOR THIS ORG ONLY
         const Subscriber = (await import('@/models/Subscriber')).default;
-        const subscribers = await Subscriber.find({});
+        const subscribers = await Subscriber.find({ organizationId: orgId });
         
         const recipients = subscribers.map(s => s.email);
-        // Fallback to Env var if list is empty, or just for testing
-        if (process.env.EMAIL_TO && !recipients.includes(process.env.EMAIL_TO)) {
-            recipients.push(process.env.EMAIL_TO);
-        }
+        
+        // Fallback to Env var if LIST IS EMPTY but ONLY IF ENV VAR IS RELEVANT (Usually strictly test env behavior)
+        // In multi-tenancy we might disable this or strictly check if env email belongs to org.
+        // For safety, let's only send to DB subscribers to prevent cross-leakage.
+        // if (process.env.EMAIL_TO && !recipients.includes(process.env.EMAIL_TO)) {
+        //     recipients.push(process.env.EMAIL_TO);
+        // }
 
         if (recipients.length === 0) {
              console.log("No subscribers to send to.");
         } else {
             console.log(`Sending to ${recipients.length} recipients...`);
             
-            // Send individually or bcc? Resend supports batching but loop is fine for small scale.
-            // Ideally use BCC or separate calls.
-            // For privacy, separate calls is better, or one call with bcc if supported by Resend explicitly (resend free tier has limits).
-            // Let's loop for max privacy and robust logging.
-            
             for (const recipient of recipients) {
                  const emailRes = await sendEmail(recipient, subject, emailHtml);
                  
-                 // Log to DB
+                 // Log to DB with Org ID
                   await EmailLog.create({
                     subject: subject,
                     recipient: recipient,
                     content: emailHtml,
                     structuredData: emailData,
                     status: emailRes.success ? 'sent' : 'failed',
-                    error: emailRes.error ? String(emailRes.error) : undefined
+                    error: emailRes.error ? String(emailRes.error) : undefined,
+                    organizationId: orgId
                  });
                  
                  // Update global status just to indicate activity

@@ -11,7 +11,7 @@ export async function GET() {
     await connectToDatabase();
     
     // Default organization for backfilling
-    const TARGET_ORG = 'TOQEN';
+    const TARGET_ORG = 'toqen';
 
     // 1. Update Competitors
     // We use updateMany to find docs where organizationId is missing or null

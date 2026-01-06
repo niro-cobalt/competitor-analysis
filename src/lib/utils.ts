@@ -11,7 +11,15 @@ export function getUserOrganization(user: any): string | null {
         const email = user.email;
         const domain = email.split('@')[1];
         if (!domain) return null;
-        return domain.split('.')[0]; 
+        
+        const orgName = domain.split('.')[0];
+        
+        // Organization Aliasing
+        if (orgName === 'toqen' || orgName === 'getcobalt' || orgName === 'cobalt') {
+            return 'toqen';
+        }
+        
+        return orgName; 
     } catch (e) {
         return null;
     }

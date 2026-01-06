@@ -37,22 +37,22 @@ async function runMigration() {
 
         const TARGET_ORG = 'toqen';
 
-        console.log(`Assigning organization '${TARGET_ORG}' to data missing organizationId...`);
+        console.log(`Assigning organization '${TARGET_ORG}' to data missing organizationId or having 'TOQEN'...`);
 
         const competitors = await Competitor.updateMany(
-            { organizationId: { $exists: false } },
+            { $or: [{ organizationId: { $exists: false } }, { organizationId: 'TOQEN' }] },
             { $set: { organizationId: TARGET_ORG } }
         );
         console.log(`Competitors updated: ${competitors.modifiedCount}`);
 
         const subscribers = await Subscriber.updateMany(
-            { organizationId: { $exists: false } },
+            { $or: [{ organizationId: { $exists: false } }, { organizationId: 'TOQEN' }] },
             { $set: { organizationId: TARGET_ORG } }
         );
         console.log(`Subscribers updated: ${subscribers.modifiedCount}`);
 
         const emails = await EmailLog.updateMany(
-            { organizationId: { $exists: false } },
+            { $or: [{ organizationId: { $exists: false } }, { organizationId: 'TOQEN' }] },
             { $set: { organizationId: TARGET_ORG } }
         );
         console.log(`EmailLogs updated: ${emails.modifiedCount}`);

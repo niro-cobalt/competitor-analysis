@@ -5,7 +5,17 @@ import { usePathname } from 'next/navigation';
 import { Home, LineChart, FileText, Settings, FlaskConical, BarChart3, Mail, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function AppSidebar() {
+import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
+
+interface User {
+    id?: string;
+    email?: string | null;
+    given_name?: string | null;
+    family_name?: string | null;
+    picture?: string | null;
+}
+
+export function AppSidebar({ user }: { user?: User | null }) {
   const pathname = usePathname();
 
   const routes = [
@@ -41,6 +51,13 @@ export function AppSidebar() {
     },
   ];
 
+  // Logic to determine organization
+  const organization = user?.email ? user.email.split('@')[1].split('.')[0] : 'Unknown Org';
+  
+  if (user) {
+      console.log(`User Organization: ${organization}`);
+  }
+
   return (
     <div className="flex h-full w-64 flex-col border-r border-white/20 glass text-sidebar-foreground">
       <div className="flex h-16 items-center border-b border-white/10 px-6 backdrop-blur-sm">
@@ -70,17 +87,27 @@ export function AppSidebar() {
           ))}
         </nav>
       </div>
-      <div className="mt-auto p-4 border-t border-white/10">
-         <div className="flex items-center gap-3 rounded-lg bg-white/40 p-3 backdrop-blur-sm ring-1 ring-white/20 shadow-sm dark:bg-black/20">
-            <div className="h-8 w-8 rounded-full bg-linear-to-tr from-primary to-purple-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">
-                CA
-            </div>
-             <div className="flex flex-col overflow-hidden">
-                 <span className="text-xs font-semibold truncate">Workspace</span>
-                 <span className="text-[10px] text-muted-foreground truncate">Free Plan</span>
-             </div>
-         </div>
-      </div>
+      {user && (
+        <div className="mt-auto p-4 border-t border-white/10">
+           <div className="flex items-center gap-3 rounded-lg bg-white/5 p-3 backdrop-blur-sm ring-1 ring-white/10 shadow-sm dark:bg-black/20 hover:bg-white/10 transition-colors">
+              {user.picture ? (
+                  <img src={user.picture} alt="Profile" className="h-9 w-9 rounded-full ring-2 ring-primary/20" />
+              ) : (
+                  <div className="h-9 w-9 rounded-full bg-linear-to-tr from-primary to-purple-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                      {user.given_name?.[0]}{user.family_name?.[0]}
+                  </div>
+              )}
+               <div className="flex flex-col overflow-hidden w-full">
+                   <span className="text-xs font-semibold truncate leading-none mb-1">{user.given_name} {user.family_name}</span>
+                   <span className="text-[10px] text-muted-foreground truncate leading-none mb-1.5">{user.email}</span>
+                   <div className="flex items-center justify-between">
+                        <span className="text-[9px] uppercase tracking-wider font-medium text-primary/70">{organization}</span>
+                        <LogoutLink className="text-[10px] text-muted-foreground hover:text-red-400 transition-colors font-medium">Sign out</LogoutLink>
+                   </div>
+               </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

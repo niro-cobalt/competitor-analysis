@@ -10,7 +10,6 @@ import { Loader2, RefreshCw, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
-import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
 
 interface Competitor {
   _id: string;
@@ -103,20 +102,6 @@ export default function DashboardClient({ user }: { user: any }) {
              <div>
                 <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl text-foreground drop-shadow-md">Competitor Watch</h1>
                 <p className="text-muted-foreground mt-1 text-base font-medium">Track competitor updates with Gemini AI.</p>
-             </div>
-             {/* User Profile */}
-             <div className="flex items-center gap-3 pl-6 border-l border-white/10 ml-6">
-                 {user.picture ? (
-                     <img src={user.picture} alt="Profile" className="h-8 w-8 rounded-full ring-2 ring-primary/20" />
-                 ) : (
-                     <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                         {user.given_name?.[0]}{user.family_name?.[0]}
-                     </div>
-                 )}
-                 <div className="text-xs">
-                     <p className="font-semibold text-foreground">{user.given_name} {user.family_name}</p>
-                     <LogoutLink className="text-muted-foreground hover:text-primary transition-colors">Sign out</LogoutLink>
-                 </div>
              </div>
           </div>
 

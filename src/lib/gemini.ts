@@ -218,12 +218,7 @@ const EmailReportSchema = z.object({
   companyUpdates: z.array(z.object({
     competitorName: z.string(),
     update: z.string(),
-    hasMajorNews: z.boolean()
-  })),
-  tableSummary: z.array(z.object({
-    competitorName: z.string(),
-    status: z.string(),
-    impactScore: z.number()
+    links: z.array(z.string())
   }))
 });
 
@@ -239,12 +234,12 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
     1. executiveSummary: A high-level overview of the market landscape changes today.
     2. companyUpdates: A list of updates for EACH competitor.
        - competitorName: The name of the competitor.
-       - update: A concise text summary of what happened. IF there is news (newsSummary/newsItems), prioritized that. If not, summarize the website changes.
-       - hasMajorNews: true if impactScore > 5 or there is significant news.
-    3. tableSummary: A quick scan table.
-       - competitorName: The name of the competitor.
-       - status: "Major Update", "Minor Update", or "No Change".
-       - impactScore: The numeric score (0-10).
+       - update: A concise text summary of what happened. IF there is news (newsSummary/newsItems), prioritize that. If not, summarize the website changes.
+       - links: An array of URL strings that ground the update. Use links provided in the input data (if any are apparent or derived from context). IF NO LINKS are available in the input, return an empty array. DO NOT HALLUCINATE LINKS.
+    
+    Strictly follow these rules:
+    - ABSOLUTELY NO HALLUCINATIONS. If you are not 100% sure about a link, do not include it.
+    - All updates must be grounded in the provided text.
     
     Do NOT use markdown code blocks in the output. Return raw JSON.
     `;
@@ -260,25 +255,13 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
             properties: {
               competitorName: { type: 'STRING' },
               update: { type: 'STRING' },
-              hasMajorNews: { type: 'BOOLEAN' }
+              links: { type: 'ARRAY', items: { type: 'STRING' } }
             },
-            required: ['competitorName', 'update', 'hasMajorNews']
-          }
-        },
-        tableSummary: {
-          type: 'ARRAY',
-          items: {
-            type: 'OBJECT',
-            properties: {
-              competitorName: { type: 'STRING' },
-              status: { type: 'STRING', enum: ["Major Update", "Minor Update", "No Change"] },
-              impactScore: { type: 'NUMBER' }
-            },
-            required: ['competitorName', 'status', 'impactScore']
+            required: ['competitorName', 'update', 'links']
           }
         }
       },
-      required: ['executiveSummary', 'companyUpdates', 'tableSummary']
+      required: ['executiveSummary', 'companyUpdates']
     };
 
     try {
@@ -287,21 +270,19 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           config: {
             responseMimeType: 'application/json',
-            responseSchema: jsonSchema as any, // Cast to any if strict typing complains, or match the SDK type
+            responseSchema: jsonSchema as any,
+            temperature: 0.0
           }
         });
     
         const text = result.text;
         if (!text) return '<p>Failed to generate report.</p>';
 
-        // With structured output, we don't need to clean markdown usually, but safe to keep basic parse
         const parsedJson = JSON.parse(cleanJson(text));
         const data = EmailReportSchema.parse(parsedJson);
 
-        // Programmatically inject the date
         const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-        // Build HTML manually
         let html = `
         <!DOCTYPE html>
         <html>
@@ -316,12 +297,10 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
             .summary-card { background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 25px; font-size: 16px; color: #4b5563; }
             .company-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 15px; transition: all 0.2s; }
             .company-name { font-weight: 700; color: #111827; font-size: 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
-            .major-badge { background-color: #fee2e2; color: #991b1b; font-size: 12px; padding: 2px 8px; border-radius: 9999px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
             .update-text { color: #4b5563; font-size: 15px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-            th { text-align: left; padding: 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
-            td { padding: 12px; border-bottom: 1px solid #e5e7eb; color: #374151; }
-            .score-cell { font-family: monospace; font-weight: 600; color: #6b7280; }
+            .source-links { margin-top: 10px; font-size: 12px; color: #6b7280; }
+            .source-link { color: #2563eb; text-decoration: none; margin-right: 10px; }
+            .source-link:hover { text-decoration: underline; }
             .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 14px; }
             .cta-button { display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; margin-top: 20px; font-size: 14px; }
             .cta-button:hover { background-color: #1d4ed8; }
@@ -343,31 +322,16 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
               <div class="company-card">
                 <div class="company-name">
                   ${update.competitorName}
-                  ${update.hasMajorNews ? '<span class="major-badge">Major Update</span>' : ''}
                 </div>
                 <div class="update-text">${update.update}</div>
+                ${update.links && update.links.length > 0 ? `
+                <div class="source-links">
+                    Sources:
+                    ${update.links.map((link, i) => `<a href="${link}" class="source-link" target="_blank">Link ${i + 1}</a>`).join('')}
+                </div>
+                ` : ''}
               </div>
             `).join('')}
-
-            <div class="section-title">Quick Glance</div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Competitor</th>
-                  <th>Status</th>
-                  <th>Impact</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${data.tableSummary.map(row => `
-                  <tr>
-                    <td>${row.competitorName}</td>
-                    <td>${row.status}</td>
-                    <td class="score-cell">${row.impactScore}/10</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
 
             <div class="footer">
               <a href="https://competitor-analysis-sigma.vercel.app/" class="cta-button">View Full Dashboard</a>

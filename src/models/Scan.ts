@@ -9,8 +9,9 @@ export interface IScan extends Document {
   summary: string;
   changesDetected: string[]; // Array of strings describing changes
   impactScore: number;
-  newsSummary?: string;
+  newsSummary: string;
   newsItems?: string[];
+  links?: string[];
   status: 'success' | 'failed';
   durationMs: number;
   error?: string;
@@ -25,6 +26,7 @@ const ScanSchema: Schema = new Schema({
   summary: { type: String },
   changesDetected: { type: [String], default: [] },
   impactScore: { type: Number, default: 0 },
+  links: { type: [String], default: [] },
   newsSummary: { type: String, default: '' },
   newsItems: { type: [String], default: [] },
   status: { type: String, enum: ['success', 'failed'], default: 'success' },

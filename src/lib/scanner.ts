@@ -87,34 +87,33 @@ export async function scanCompetitor(competitorId: string) {
     // 3. Get previous scan
     const lastScan = await Scan.findOne({ competitorId }).sort({ createdAt: -1 });
 
-    // 4. Analyze with Gemini (Website + Social Content)
-    const [analysis, newsAnalysis] = await Promise.all([
-        analyzeCompetitorUpdate(
-            competitor.name, 
-            textContent, 
-            lastScan ? lastScan.rawContent : null,
-            competitor.instructions,
-            linkedinContent,
-            twitterContent
-        ),
-        searchCompetitorNews(competitor.name)
-    ]);
+    // Analyze changes with Gemini
+    const analysis = await analyzeCompetitorUpdate(
+        competitor.name,
+        textContent, // Use textContent
+        lastScan ? lastScan.rawContent : null,
+        competitor.instructions,
+        linkedinContent, // Use linkedinContent
+        twitterContent // Use twitterContent
+    );
 
-    const durationMs = Date.now() - startTime;
+    // Search for news
+    const news = await searchCompetitorNews(competitor.name);
 
-    // 5. Save Scan
+    // Create new scan record
     const newScan = await Scan.create({
       competitorId: competitor._id,
-      rawContent: textContent,
-      linkedinContent,
-      twitterContent,
+      rawContent: textContent, // Use textContent
+      linkedinContent: linkedinContent, // Use linkedinContent
+      twitterContent: twitterContent, // Use twitterContent
       summary: analysis.summary,
       changesDetected: analysis.changes || [],
       impactScore: analysis.impact_score || 0,
-      newsSummary: newsAnalysis.summary,
-      newsItems: newsAnalysis.newsItems,
+      links: analysis.links || [], // Added this line
+      newsSummary: news.summary,
+      newsItems: news.newsItems,
       status: 'success',
-      durationMs
+      durationMs: Date.now() - startTime
     });
 
     // Update competitor last scanned time

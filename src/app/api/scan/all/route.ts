@@ -36,7 +36,8 @@ export async function POST() {
                     changes: result.changesDetected || [],
                     impactScore: result.impactScore || 0,
                     newsSummary: result.newsSummary,
-                    newsItems: result.newsItems
+                    newsItems: result.newsItems,
+                    links: result.links || []
                 });
 
                 return { competitor: competitor.name, status: 'success', scanId: result._id };

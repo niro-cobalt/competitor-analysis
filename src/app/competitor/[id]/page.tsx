@@ -24,6 +24,7 @@ interface Scan {
   changesDetected: string[];
   impactScore: number;
   status?: string;
+  links?: string[];
 }
 
 export default function CompetitorDetails() {
@@ -120,6 +121,23 @@ export default function CompetitorDetails() {
                         </ul>
                       </div>
                     )}
+
+                    <div className="mt-4">
+                        <h4 className="font-semibold mb-2 text-sm uppercase tracking-wide text-muted-foreground">Source Links</h4>
+                        {scan.links && scan.links.length > 0 ? (
+                            <ul className="space-y-1 text-sm">
+                                {scan.links.map((link, idx) => (
+                                    <li key={idx}>
+                                        <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
+                                            {link}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-muted-foreground italic">No source links provided</p>
+                        )}
+                    </div>
                   </CardContent>
                 </Card>
               ))

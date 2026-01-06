@@ -34,6 +34,7 @@ const CompetitorAnalysisSchema = z.object({
   summary: z.string(),
   changes: z.array(z.string()),
   impact_score: z.number().min(0).max(10),
+  links: z.array(z.string())
 });
 
 export type CompetitorAnalysis = z.infer<typeof CompetitorAnalysisSchema>;
@@ -74,6 +75,7 @@ export async function analyzeCompetitorUpdate(
 
   if (instructions) {
       prompt += `
+      
       SPECIAL INSTRUCTIONS FOR THIS COMPETITOR:
       ${instructions}
       
@@ -96,11 +98,18 @@ export async function analyzeCompetitorUpdate(
     
     Ignore trivial changes like timestamps, copyright dates, or dynamic dynamic feed items (like random blog posts) unless they signal a major strategic shift.
     
+    Requirement regarding Links:
+    - Extract distinct URLs from the content that act as sources for your findings (e.g. link to a new blog post, a specific page, or a tweet).
+    - Return them in the 'links' array.
+    
     Output a strictly valid JSON object matching this schema.
     `;
   } else {
     prompt += `
     Task: This is the first scan. Summarize what this competitor does and their key value propositions.
+    
+    Requirement regarding Links:
+    - Extract distinct URLs from the content that act as sources for your findings.
     
     Output a strictly valid JSON object matching this schema.
     `;
@@ -111,9 +120,10 @@ export async function analyzeCompetitorUpdate(
     properties: {
       summary: { type: 'STRING' },
       changes: { type: 'ARRAY', items: { type: 'STRING' } },
-      impact_score: { type: 'NUMBER' }
+      impact_score: { type: 'NUMBER' },
+      links: { type: 'ARRAY', items: { type: 'STRING' } }
     },
-    required: ['summary', 'changes', 'impact_score']
+    required: ['summary', 'changes', 'impact_score', 'links']
   };
 
   try {
@@ -324,12 +334,13 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
                   ${update.competitorName}
                 </div>
                 <div class="update-text">${update.update}</div>
-                ${update.links && update.links.length > 0 ? `
                 <div class="source-links">
                     Sources:
-                    ${update.links.map((link, i) => `<a href="${link}" class="source-link" target="_blank">Link ${i + 1}</a>`).join('')}
+                    ${update.links && update.links.length > 0 ? 
+                        update.links.map((link, i) => `<a href="${link}" class="source-link" target="_blank">Link ${i + 1}</a>`).join('') 
+                        : '<span style="color: #9ca3af; font-style: italic;">No source links provided</span>'
+                    }
                 </div>
-                ` : ''}
               </div>
             `).join('')}
 

@@ -6,6 +6,7 @@ export interface IScan extends Document {
   rawContent: string;
   linkedinContent?: string;
   twitterContent?: string;
+  additionalContent?: string;
   summary: string;
   changesDetected: string[]; // Array of strings describing changes
   impactScore: number;
@@ -23,6 +24,7 @@ const ScanSchema: Schema = new Schema({
   rawContent: { type: String }, // Can be large, maybe we truncate? 
   linkedinContent: { type: String },
   twitterContent: { type: String },
+  additionalContent: { type: String },
   summary: { type: String },
   changesDetected: { type: [String], default: [] },
   impactScore: { type: Number, default: 0 },

@@ -45,7 +45,8 @@ export async function analyzeCompetitorUpdate(
   oldContent: string | null,
   instructions?: string,
   linkedinContent?: string,
-  twitterContent?: string
+  twitterContent?: string,
+  additionalContent?: string
 ): Promise<CompetitorAnalysis> {
 
   let prompt = `You are a competitive intelligence analyst.
@@ -70,6 +71,14 @@ export async function analyzeCompetitorUpdate(
       
       Twitter/X Feed Content:
       ${twitterContent.substring(0, 5000)} ... [truncated]
+      `;
+  }
+
+  if (additionalContent) {
+      prompt += `
+      
+      ADDITIONAL MONITORED SOURCES (e.g. Executives, Newsroom):
+      ${additionalContent.substring(0, 10000)} ... [truncated]
       `;
   }
 

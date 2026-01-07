@@ -48,16 +48,17 @@ export async function scanCompetitor(competitorId: string) {
        throw new Error('Failed to extract sufficient content from the page.');
     }
 
-    // 2. Fetch Social Content (Parallel)
+    // 2. Fetch Social Content & Additional URLs (Parallel)
     let linkedinContent = '';
     let twitterContent = '';
+    let additionalContent = '';
     
-    const socialPromises: Promise<void>[] = [];
+    const extraPromises: Promise<void>[] = [];
 
+    // Linkedin
     if (competitor.linkedinUrl) {
-        socialPromises.push((async () => {
+        extraPromises.push((async () => {
             try {
-                console.log(`Scanning LinkedIn: ${competitor.linkedinUrl}`);
                 const jinaUrl = `https://r.jina.ai/${competitor.linkedinUrl}`;
                 const headers: Record<string, string> = process.env.JINA_API_KEY ? { 'Authorization': `Bearer ${process.env.JINA_API_KEY}` } : {};
                 const res = await fetch(jinaUrl, { headers, next: { revalidate: 0 } });
@@ -68,10 +69,10 @@ export async function scanCompetitor(competitorId: string) {
         })());
     }
 
+    // Twitter
     if (competitor.twitterUrl) {
-        socialPromises.push((async () => {
+        extraPromises.push((async () => {
             try {
-                console.log(`Scanning Twitter: ${competitor.twitterUrl}`);
                 const jinaUrl = `https://r.jina.ai/${competitor.twitterUrl}`;
                 const headers: Record<string, string> = process.env.JINA_API_KEY ? { 'Authorization': `Bearer ${process.env.JINA_API_KEY}` } : {};
                 const res = await fetch(jinaUrl, { headers, next: { revalidate: 0 } });
@@ -82,7 +83,29 @@ export async function scanCompetitor(competitorId: string) {
         })());
     }
 
-    await Promise.all(socialPromises);
+    // Additional URLs
+    if (competitor.additionalUrls && competitor.additionalUrls.length > 0) {
+        extraPromises.push((async () => {
+            const results = await Promise.all(competitor.additionalUrls.map(async (url: string) => {
+                 try {
+                    const jinaUrl = `https://r.jina.ai/${url}`;
+                    const headers: Record<string, string> = process.env.JINA_API_KEY ? { 'Authorization': `Bearer ${process.env.JINA_API_KEY}` } : {};
+                    const res = await fetch(jinaUrl, { headers, next: { revalidate: 0 } });
+                    if (res.ok) {
+                        const text = await res.text();
+                        return `--- SOURCE: ${url} ---\n${text.substring(0, 5000)}\n\n`;
+                    }
+                    return '';
+                } catch (e) {
+                    console.warn(`Failed to scrape additional URL: ${url}`, e);
+                    return '';
+                }
+            }));
+            additionalContent = results.join('');
+        })());
+    }
+
+    await Promise.all(extraPromises);
 
     // 3. Get previous scan
     const lastScan = await Scan.findOne({ competitorId }).sort({ createdAt: -1 });
@@ -90,11 +113,12 @@ export async function scanCompetitor(competitorId: string) {
     // Analyze changes with Gemini
     const analysis = await analyzeCompetitorUpdate(
         competitor.name,
-        textContent, // Use textContent
+        textContent, 
         lastScan ? lastScan.rawContent : null,
         competitor.instructions,
-        linkedinContent, // Use linkedinContent
-        twitterContent // Use twitterContent
+        linkedinContent,
+        twitterContent,
+        additionalContent
     );
 
     // Search for news
@@ -103,13 +127,14 @@ export async function scanCompetitor(competitorId: string) {
     // Create new scan record
     const newScan = await Scan.create({
       competitorId: competitor._id,
-      rawContent: textContent, // Use textContent
-      linkedinContent: linkedinContent, // Use linkedinContent
-      twitterContent: twitterContent, // Use twitterContent
+      rawContent: textContent,
+      linkedinContent: linkedinContent,
+      twitterContent: twitterContent,
+      additionalContent: additionalContent,
       summary: analysis.summary,
       changesDetected: analysis.changes || [],
       impactScore: analysis.impact_score || 0,
-      links: analysis.links || [], // Added this line
+      links: analysis.links || [],
       newsSummary: news.summary,
       newsItems: news.newsItems,
       status: 'success',

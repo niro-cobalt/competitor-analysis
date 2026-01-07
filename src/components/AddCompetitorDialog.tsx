@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { Plus, X } from 'lucide-react';
 
 interface AddCompetitorDialogProps {
   onCompetitorAdded: () => void;
@@ -19,6 +20,19 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [twitterUrl, setTwitterUrl] = useState('');
   const [instructions, setInstructions] = useState('');
+  const [additionalUrls, setAdditionalUrls] = useState<string[]>([]);
+  const [newUrl, setNewUrl] = useState('');
+
+  const addUrl = () => {
+      if (newUrl && !additionalUrls.includes(newUrl)) {
+          setAdditionalUrls([...additionalUrls, newUrl]);
+          setNewUrl('');
+      }
+  };
+
+  const removeUrl = (idx: number) => {
+      setAdditionalUrls(additionalUrls.filter((_, i) => i !== idx));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +42,7 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
       const res = await fetch('/api/competitors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, url, linkedinUrl, twitterUrl, instructions }),
+        body: JSON.stringify({ name, url, linkedinUrl, twitterUrl, instructions, additionalUrls }),
       });
 
       if (!res.ok) throw new Error('Failed to add competitor');
@@ -40,6 +54,7 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
       setLinkedinUrl('');
       setTwitterUrl('');
       setInstructions('');
+      setAdditionalUrls([]);
       onCompetitorAdded();
     } catch (error) {
       toast.error('Error adding competitor');
@@ -54,7 +69,7 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
       <DialogTrigger asChild>
         <Button>Add Competitor</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Track New Competitor</DialogTitle>
         </DialogHeader>
@@ -100,6 +115,35 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
               onChange={(e) => setTwitterUrl(e.target.value)} 
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Additional Monitored Links (Optional)</Label>
+            <div className="flex gap-2">
+                <Input 
+                    placeholder="e.g. Careers Page or CEO LinkedIn" 
+                    value={newUrl}
+                    onChange={(e) => setNewUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }}
+                />
+                <Button type="button" size="icon" onClick={addUrl} variant="outline">
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </div>
+            {additionalUrls.length > 0 && (
+                <ul className="space-y-2 mt-2">
+                    {additionalUrls.map((link, idx) => (
+                        <li key={idx} className="flex items-center justify-between text-sm bg-muted p-2 rounded">
+                            <span className="truncate flex-1 mr-2">{link}</span>
+                            <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeUrl(idx)}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            <p className="text-[10px] text-muted-foreground">Add specific pages like "Newsroom", "Pricing", or key executive profiles.</p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="instructions">Analysis Instructions (Optional)</Label>
             <textarea 

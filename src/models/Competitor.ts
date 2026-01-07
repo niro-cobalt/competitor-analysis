@@ -7,6 +7,7 @@ export interface ICompetitor extends Document {
   linkedinUrl?: string;
   twitterUrl?: string;
   instructions?: string;
+  additionalUrls: string[];
   lastScannedAt?: Date;
   organizationId: string;
   createdAt: Date;
@@ -21,6 +22,7 @@ const CompetitorSchema: Schema = new Schema({
   twitterUrl: { type: String },
   instructions: { type: String },
   lastScannedAt: { type: Date },
+  additionalUrls: { type: [String], default: [] },
   organizationId: { type: String, required: true, index: true },
 }, { 
   timestamps: true 

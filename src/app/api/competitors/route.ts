@@ -35,7 +35,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, url, linkedinUrl, twitterUrl, instructions } = await req.json();
+    const { name, url, linkedinUrl, twitterUrl, instructions, tags, additionalUrls } = await req.json();
     if (!name || !url) {
       return NextResponse.json({ error: 'Name and URL are required' }, { status: 400 });
     }
@@ -57,6 +57,8 @@ export async function POST(req: Request) {
         twitterUrl, 
         logo, 
         instructions,
+        tags,
+        additionalUrls,
         organizationId: orgId
     });
     return NextResponse.json(competitor, { status: 201 });

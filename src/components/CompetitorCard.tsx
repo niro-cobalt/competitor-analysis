@@ -28,12 +28,32 @@ interface Competitor {
   instructions?: string;
   lastScannedAt?: string;
   updatedAt: string;
+  tags?: string[];
 }
 
 interface CompetitorCardProps {
   competitor: Competitor;
   onScanComplete: () => void;
 }
+
+// Simple hash for consistent tag colors
+const getTagColor = (tag: string) => {
+    const colors = [
+        "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800",
+        "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
+        "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800",
+        "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800",
+        "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800",
+        "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-800",
+        "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800",
+        "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700",
+    ];
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+        hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+};
 
 export function CompetitorCard({ competitor, onScanComplete }: CompetitorCardProps) {
   const [scanning, setScanning] = useState(false);
@@ -100,8 +120,8 @@ export function CompetitorCard({ competitor, onScanComplete }: CompetitorCardPro
       <div className="p-5 flex-1 flex flex-col gap-4">
         {/* Header: Logo, Name, Links */}
         <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-lg bg-background border border-border shadow-sm flex items-center justify-center p-2 overflow-hidden">
+            <div className="flex items-start gap-4 w-full">
+                <div className="h-12 w-12 shrink-0 rounded-lg bg-background border border-border shadow-sm flex items-center justify-center p-2 overflow-hidden">
                     <img 
                         src={competitor.logo || `https://logo.clearbit.com/${(() => { try { return new URL(competitor.url).hostname } catch { return '' } })()}`}
                         alt={`${competitor.name} logo`}
@@ -109,17 +129,25 @@ export function CompetitorCard({ competitor, onScanComplete }: CompetitorCardPro
                         onError={(e) => { (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=' + competitor.name + '&background=random' }}
                     />
                 </div>
-                <div>
-                    <h3 className="font-semibold text-lg hover:text-primary transition-colors">
-                        <Link href={`/competitor/${competitor._id}`}>
-                            {competitor.name}
-                        </Link>
-                    </h3>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between w-full">
+                         <h3 className="font-semibold text-lg hover:text-primary transition-colors truncate pr-2">
+                            <Link href={`/competitor/${competitor._id}`}>
+                                {competitor.name}
+                            </Link>
+                        </h3>
+                        <EditCompetitorDialog 
+                            competitor={competitor} 
+                            onCompetitorUpdated={onScanComplete} 
+                        />
+                    </div>
+                   
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 mb-2">
                         <a href={competitor.url} target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline truncate max-w-[150px]">
                             {new URL(competitor.url).hostname}
                         </a>
-                        <div className="flex gap-2 border-l pl-2 border-border/50">
+                         {/* Social Links Small */}
+                         <div className="flex gap-2 border-l pl-2 border-border/50">
                              {competitor.linkedinUrl && (
                                 <a href={competitor.linkedinUrl} target="_blank" className="hover:text-[#0077b5]"><Linkedin className="h-3.5 w-3.5" /></a>
                              )}
@@ -128,13 +156,22 @@ export function CompetitorCard({ competitor, onScanComplete }: CompetitorCardPro
                              )}
                         </div>
                     </div>
+
+                     {/* Tags */}
+                     {competitor.tags && competitor.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                            {competitor.tags.map((tag) => (
+                                <span 
+                                    key={tag} 
+                                    className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${getTagColor(tag)}`}
+                                >
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
-            
-            <EditCompetitorDialog 
-                competitor={competitor} 
-                onCompetitorUpdated={onScanComplete} 
-            />
         </div>
 
         {/* Weekly Summary */}

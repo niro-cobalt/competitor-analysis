@@ -22,6 +22,8 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
   const [instructions, setInstructions] = useState('');
   const [additionalUrls, setAdditionalUrls] = useState<string[]>([]);
   const [newUrl, setNewUrl] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState('');
 
   const addUrl = () => {
       if (newUrl && !additionalUrls.includes(newUrl)) {
@@ -34,6 +36,17 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
       setAdditionalUrls(additionalUrls.filter((_, i) => i !== idx));
   };
 
+  const addTag = () => {
+      if (newTag && !tags.includes(newTag)) {
+          setTags([...tags, newTag]);
+          setNewTag('');
+      }
+  };
+
+  const removeTag = (idx: number) => {
+      setTags(tags.filter((_, i) => i !== idx));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -42,7 +55,7 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
       const res = await fetch('/api/competitors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, url, linkedinUrl, twitterUrl, instructions, additionalUrls }),
+        body: JSON.stringify({ name, url, linkedinUrl, twitterUrl, instructions, additionalUrls, tags }),
       });
 
       if (!res.ok) throw new Error('Failed to add competitor');
@@ -55,6 +68,7 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
       setTwitterUrl('');
       setInstructions('');
       setAdditionalUrls([]);
+      setTags([]);
       onCompetitorAdded();
     } catch (error) {
       toast.error('Error adding competitor');
@@ -95,8 +109,38 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
               required 
             />
           </div>
+          
+           {/* Tags Input */}
+           <div className="space-y-2">
+            <Label>Tags (Optional)</Label>
+            <div className="flex gap-2">
+                <Input 
+                    placeholder="e.g. SaaS, High Priority" 
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+                />
+                <Button type="button" size="icon" onClick={addTag} variant="outline">
+                    <Plus className="h-4 w-4" />
+                </Button>
+            </div>
+            {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {tags.map((tag, idx) => (
+                        <div key={idx} className="flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-full border border-primary/20">
+                            <span>{tag}</span>
+                            <button type="button" onClick={() => removeTag(idx)} className="hover:text-destructive">
+                                <X className="h-3 w-3" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+          </div>
+          
           <div className="space-y-2">
             <Label htmlFor="linkedinUrl">LinkedIn URL (Optional)</Label>
+// ... existing inputs
             <Input 
               id="linkedinUrl" 
               type="url" 

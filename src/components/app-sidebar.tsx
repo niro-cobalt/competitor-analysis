@@ -49,6 +49,12 @@ export function AppSidebar({ user }: { user?: User | null }) {
       href: '/admin',
       active: pathname === '/admin',
     },
+    {
+      label: 'Settings',
+      icon: Settings,
+      href: '/settings',
+      active: pathname === '/settings',
+    },
   ];
 
   // Logic to determine organization

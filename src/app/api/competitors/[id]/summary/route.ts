@@ -68,12 +68,20 @@ export async function POST(
         return NextResponse.json({ message: 'No scans found for the period' });
     }
 
-    // Generate summary
-    const summaryText = await generateWeeklyReport(scans.map((s: any) => ({
-        summary: s.summary,
-        changes: s.changes,
-        date: s.createdAt
-    })));
+    // Fetch user settings to customize the report
+    const settings = await import('@/models/Settings').then(m => m.default.findOne({ userId: user.id }));
+    const style = settings?.emailStyle || 'informative';
+    const includeTldr = settings?.includeTldr !== undefined ? settings.includeTldr : true;
+
+    // Generate summary with user preferences
+    const summaryText = await generateWeeklyReport(
+        scans.map((s: any) => ({
+            summary: s.summary,
+            changes: s.changes,
+            date: s.createdAt
+        })),
+        { style, includeTldr }
+    );
 
     // Save summary
     const newSummary = await CompetitorSummary.create({

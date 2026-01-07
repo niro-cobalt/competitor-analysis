@@ -370,7 +370,11 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
     }
 }
 
-export async function generateWeeklyReport(scans: { summary: string, changes: string[], date: Date }[]): Promise<string> {
+export async function generateWeeklyReport(
+  scans: { summary: string, changes: string[], date: Date }[],
+  options: { style?: string, includeTldr?: boolean } = {}
+): Promise<string> {
+  const { style = 'informative', includeTldr = true } = options;
   const prompt = `
   You are a competitive intelligence analyst.
   Here are the updates from the last week for a specific competitor:
@@ -382,12 +386,16 @@ export async function generateWeeklyReport(scans: { summary: string, changes: st
 
   Task: synthesize these updates into a concise "Weekly Summary".
   
+  Style Guide:
+  - Tone: ${style} (e.g. if 'chatty', use a conversational tone; if 'minimalistic', be extremely brief; if 'techy', use technical jargon; if 'informative', be professional and detailed).
+
   Requirements:
   1. Focus on the most important strategic shifts (pricing, new features, message changes).
   2. Ignore repetitive or minor updates.
   3. If there were no meaningful updates, say "No significant updates this week."
   4. Keep it under 50 words usually, unless there was a massive launch.
-  5. Output format: A single paragraph of plain text.
+  ${options.includeTldr ? '5. Start with a very short "TL;DR" sentence.' : '5. DO NOT include a "TL;DR".'}
+  6. Output format: A single paragraph of plain text.
   `;
 
   try {

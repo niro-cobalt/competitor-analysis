@@ -1,15 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { AddCompetitorDialog } from '@/components/AddCompetitorDialog';
-import { ManageSubscribersDialog } from '@/components/ManageSubscribersDialog';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { CompetitorCard } from '@/components/CompetitorCard';
-import { Toaster } from 'sonner';
+import { AddCompetitorDialog } from '@/components/AddCompetitorDialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, Mail } from 'lucide-react';
-import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { formatDistanceToNow } from 'date-fns';
+import { RefreshCw, Loader2 } from 'lucide-react';
+import { toast, Toaster } from 'sonner';
+import { ManageSubscribersDialog } from '@/components/ManageSubscribersDialog';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 
 interface Competitor {
   _id: string;
@@ -21,21 +27,6 @@ interface Competitor {
   instructions?: string;
   lastScannedAt?: string;
   updatedAt: string;
-}
-
-interface EmailLog {
-  _id: string;
-  subject: string;
-  recipient: string;
-  status: 'sent' | 'failed';
-  content: string;
-  structuredData?: Array<{
-    competitor: string;
-    summary: string;
-    changes: string[];
-    impactScore: number;
-  }>;
-  sentAt: string;
 }
 
 export default function DashboardClient({ user }: { user: any }) {
@@ -82,6 +73,17 @@ export default function DashboardClient({ user }: { user: any }) {
     <main className="min-h-screen bg-background p-6 md:p-10 relative overflow-y-auto w-full">
        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
+              <Breadcrumb className="mb-2">
+                <BreadcrumbList>
+                    <BreadcrumbItem>
+                    <BreadcrumbLink href="/">Home</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                    <BreadcrumbPage>Dashboard</BreadcrumbPage>
+                    </BreadcrumbItem>
+                </BreadcrumbList>
+                </Breadcrumb>
              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Competitor Watch</h1>
              <p className="text-muted-foreground mt-1 text-base">Monitor your market landscape.</p>
           </div>

@@ -8,7 +8,7 @@ if (!GEMINI_API_KEY) {
 }
 
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-const MODEL_NAME = 'gemini-2.0-flash-exp'; // Use a known working model for structured output until gemini-3 is fully stable/public aliases are confirmed
+const MODEL_NAME = process.env.GEMINI_MODEL_NAME || 'gemini-3-flash';
 
 /**
  * Clean up JSON string by removing markdown code blocks and whitespace

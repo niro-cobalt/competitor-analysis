@@ -54,7 +54,14 @@ export async function createCronJob(orgId: string, job: CronJobConfig): Promise<
   if (!API_KEY) throw new Error('CRON_JOB_ORG_API_KEY is missing');
 
   // Prefix title with [orgId] for scoping
-  const scopedTitle = `[${orgId}] ${job.title}`;
+  // Mapping: If orgId is "toqen" or "getcobalt", display "Cobalt" in the title
+  let displayOrg = orgId;
+  const lowerOrg = orgId.toLowerCase();
+  if (lowerOrg === 'toqen' || lowerOrg === 'getcobalt') {
+      displayOrg = 'Cobalt';
+  }
+
+  const scopedTitle = `[${displayOrg}] ${job.title}`;
 
   const payload = {
     job: {

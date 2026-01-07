@@ -53,7 +53,9 @@ export async function syncKindeUser(kindeUser: any): Promise<void> {
             let cronJobId: number | undefined;
             try {
                 // Default: Daily at 9am UTC
-                const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+                // Using process.env.VERCEL_URL for base. In dev, this might be missing or localhost.
+                const vercelUrl = process.env.VERCEL_URL ? process.env.VERCEL_URL.replace(/^https?:\/\//, '') : null;
+                const baseUrl = vercelUrl ? `https://${vercelUrl}` : 'http://localhost:3000';
                 const targetUrl = `${baseUrl}/api/emails`; 
                 
                 console.log(`[SyncUser] Creating default cron job targeting: ${targetUrl}`);

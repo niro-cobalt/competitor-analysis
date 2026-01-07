@@ -132,7 +132,8 @@ export async function POST(req: Request) {
                 if (existingSettings && existingSettings.cronJobId) {
                      await updateCronJob(orgId, existingSettings.cronJobId, { schedule });
                 } else {
-                     const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+                     const vercelUrl = process.env.VERCEL_URL ? process.env.VERCEL_URL.replace(/^https?:\/\//, '') : null;
+                     const baseUrl = vercelUrl ? `https://${vercelUrl}` : 'http://localhost:3000';
                      const targetUrl = `${baseUrl}/api/emails`;
                      const newJobId = await createCronJob(orgId, {
                          title: 'Daily Email Report', 

@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
-import { Outfit } from 'next/font/google';
+import { Outfit, Syne_Mono } from 'next/font/google';
 import './globals.css';
 
 const outfit = Outfit({ subsets: ['latin'] });
+const synemono = Syne_Mono({ subsets: ['latin'], weight: '400' });
 
 export const metadata: Metadata = {
   title: 'Competitor Analysis',
@@ -31,7 +32,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={outfit.className}>
+      <body className={synemono.className}>
         <div className="flex h-screen w-full overflow-hidden bg-background">
           <AppSidebar user={user} />
           <main className="flex-1 overflow-y-auto relative z-10">

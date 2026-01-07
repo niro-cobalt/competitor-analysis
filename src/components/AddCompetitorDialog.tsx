@@ -140,7 +140,6 @@ export function AddCompetitorDialog({ onCompetitorAdded }: AddCompetitorDialogPr
           
           <div className="space-y-2">
             <Label htmlFor="linkedinUrl">LinkedIn URL (Optional)</Label>
-// ... existing inputs
             <Input 
               id="linkedinUrl" 
               type="url" 

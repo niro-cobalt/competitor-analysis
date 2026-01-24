@@ -108,7 +108,12 @@ export async function scanCompetitor(competitorId: string) {
     await Promise.all(extraPromises);
 
     // 3. Get previous scan
-    const lastScan = await Scan.findOne({ competitorId }).sort({ createdAt: -1 });
+    // Fix: Ensure we compare against a SUCCESSFUL scan with content, otherwise diff will be huge/wrong.
+    const lastScan = await Scan.findOne({ 
+        competitorId,
+        status: 'success',
+        rawContent: { $exists: true, $ne: "" }
+    }).sort({ createdAt: -1 });
 
     // Analyze changes with Gemini
     const analysis = await analyzeCompetitorUpdate(

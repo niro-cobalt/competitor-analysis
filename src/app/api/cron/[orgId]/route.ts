@@ -23,6 +23,14 @@ export async function GET(
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const force = searchParams.get('force') === 'true';
+    const isMonday = new Date().getDay() === 1;
+
+    if (!isMonday && !force) {
+        console.log(`[Cron] Skipped for org: ${orgId} (Not Monday)`);
+        return NextResponse.json({ status: 'skipped', message: 'Not Monday. Use ?force=true to override.' });
+    }
+
     if (!orgId) {
         return NextResponse.json({ error: 'Missing Org ID' }, { status: 400 });
     }

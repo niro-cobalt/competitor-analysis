@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { getUserOrganization } from '@/lib/utils';
 import { runOrgScan } from '@/lib/scan-service';
@@ -7,14 +7,20 @@ import { runOrgScan } from '@/lib/scan-service';
 export const maxDuration = 300; 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const { getUser } = getKindeServerSession();
     const user = await getUser();
-    const orgId = getUserOrganization(user);
+    let orgId = getUserOrganization(user);
+
+    // Fallback: Check query params if no session orgId
+    if (!orgId) {
+        const searchParams = req.nextUrl.searchParams;
+        orgId = searchParams.get('orgId');
+    }
 
     if (!orgId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'Unauthorized: Missing Org ID' }, { status: 401 });
     }
 
     const result = await runOrgScan(orgId);
@@ -29,6 +35,6 @@ export async function POST() {
   }
 }
 
-export async function GET() {
-    return POST();
+export async function GET(req: NextRequest) {
+    return POST(req);
 }

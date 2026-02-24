@@ -17,29 +17,6 @@ export default withAuth(async function middleware(req: any) {
     return NextResponse.next();
   }
 
-  const isPostLoginRedirect = req.nextUrl.pathname === '/dashboard' 
-
-  if (isPostLoginRedirect) {
-    try {
-      const baseUrl = req.nextUrl.origin;
-      const response = await fetch(`${baseUrl}/api/v1/business/organization/users/update`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user }),
-      });
-
-      // console.log('Response:', response);
-
-      if (!response.ok) {
-        console.error('Failed to update user data');
-      }
-    } catch (error) {
-      console.error('Error updating user:', error);
-    }
-  }
-
   return NextResponse.next();
 });
 

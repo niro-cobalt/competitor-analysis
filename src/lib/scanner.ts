@@ -115,19 +115,19 @@ export async function scanCompetitor(competitorId: string) {
         rawContent: { $exists: true, $ne: "" }
     }).sort({ createdAt: -1 });
 
-    // Analyze changes with Gemini
-    const analysis = await analyzeCompetitorUpdate(
-        competitor.name,
-        textContent, 
-        lastScan ? lastScan.rawContent : null,
-        competitor.instructions,
-        linkedinContent,
-        twitterContent,
-        additionalContent
-    );
-
-    // Search for news
-    const news = await searchCompetitorNews(competitor.name);
+    // Analyze changes and search for news in parallel
+    const [analysis, news] = await Promise.all([
+        analyzeCompetitorUpdate(
+            competitor.name,
+            textContent,
+            lastScan ? lastScan.rawContent : null,
+            competitor.instructions,
+            linkedinContent,
+            twitterContent,
+            additionalContent
+        ),
+        searchCompetitorNews(competitor.name)
+    ]);
 
     // Create new scan record
     const newScan = await Scan.create({

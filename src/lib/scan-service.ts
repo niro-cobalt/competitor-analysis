@@ -17,8 +17,7 @@ export async function runOrgScan(orgId: string) {
       return { status: 'skipped', message: 'No competitors found to scan', results: [], errors: [] };
     }
 
-    // Limit concurrency to 1
-    const limit = pLimit(1);
+    const limit = pLimit(3);
     const emailData: any[] = [];
     
     // Create promises for all scans
@@ -60,7 +59,12 @@ export async function runOrgScan(orgId: string) {
         const emailHtml = await generateEmailReport(emailData);
         console.log("Sending email...");
         
-        const subject = `Competitor Update - ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+        const changedCount = emailData.filter(d => d.changes && d.changes.length > 0).length;
+        const totalCount = emailData.length;
+        const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const subject = changedCount > 0
+            ? `Competitor Intel: ${changedCount} of ${totalCount} competitors had updates — ${dateStr}`
+            : `Competitor Intel: No major changes detected — ${dateStr}`;
         
         // Fetch subscribers FOR THIS ORG ONLY
         const subscribers = await Subscriber.find({ organizationId: orgId });

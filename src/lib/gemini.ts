@@ -236,6 +236,9 @@ const EmailReportSchema = z.object({
   executiveSummary: z.string(),
   companyUpdates: z.array(z.object({
     competitorName: z.string(),
+    hasChanges: z.boolean(),
+    impactScore: z.number(),
+    keyChanges: z.array(z.string()),
     update: z.string(),
     links: z.array(z.string())
   }))
@@ -243,23 +246,29 @@ const EmailReportSchema = z.object({
 
 export async function generateEmailReport(scans: { competitor: string, summary: string, changes: string[], impactScore: number, newsSummary?: string, newsItems?: string[] }[]): Promise<string> {
     const prompt = `
-    You are a competitive intelligence analyst.
-    Here are the results of today's monitoring scan:
+    You are a competitive intelligence analyst generating a CHANGE-FOCUSED briefing.
+    Here are the results of the latest monitoring scan:
     ${JSON.stringify(scans, null, 2)}
 
-    Task: Analyze these results and generate a structured daily briefing.
-    
+    Task: Analyze these results and generate a structured briefing that emphasizes WHAT CHANGED since the last scan.
+
     Requirements:
-    1. executiveSummary: A high-level overview of the market landscape changes today.
-    2. companyUpdates: A list of updates for EACH competitor.
+    1. executiveSummary: A high-level overview focusing on the most important new developments. Lead with the highest-impact changes. If nothing meaningful changed across all competitors, say so clearly.
+    2. companyUpdates: A list of updates for EACH competitor:
        - competitorName: The name of the competitor.
-       - update: A concise text summary of what happened. IF there is news (newsSummary/newsItems), prioritize that. If not, summarize the website changes.
-       - links: An array of URL strings that ground the update. Use links provided in the input data (if any are apparent or derived from context). IF NO LINKS are available in the input, return an empty array. DO NOT HALLUCINATE LINKS.
-    
+       - hasChanges: true if there are meaningful new developments (changes array is non-empty, impactScore > 2, or there is notable news). false if nothing meaningful changed.
+       - impactScore: The impact score from the scan data (0-10). Use the impactScore from the input data.
+       - keyChanges: A short bullet list (1-3 items) of the most important specific changes detected. If no changes, return an empty array.
+       - update: If hasChanges is true, provide a detailed summary focusing on what's NEW — new features, pricing changes, messaging shifts, partnerships, etc. Prioritize news (newsSummary/newsItems) if available. If hasChanges is false, write a single brief sentence like "No significant changes detected since last scan."
+       - links: An array of URL strings that ground the update. Use links provided in the input data. IF NO LINKS are available, return an empty array. DO NOT HALLUCINATE LINKS.
+
+    Sorting: Order companyUpdates by impactScore descending (highest impact first).
+
     Strictly follow these rules:
     - ABSOLUTELY NO HALLUCINATIONS. If you are not 100% sure about a link, do not include it.
     - All updates must be grounded in the provided text.
-    
+    - Clearly distinguish between NEW information and previously known status quo.
+
     Do NOT use markdown code blocks in the output. Return raw JSON.
     `;
 
@@ -273,10 +282,13 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
             type: 'OBJECT',
             properties: {
               competitorName: { type: 'STRING' },
+              hasChanges: { type: 'BOOLEAN' },
+              impactScore: { type: 'NUMBER' },
+              keyChanges: { type: 'ARRAY', items: { type: 'STRING' } },
               update: { type: 'STRING' },
               links: { type: 'ARRAY', items: { type: 'STRING' } }
             },
-            required: ['competitorName', 'update', 'links']
+            required: ['competitorName', 'hasChanges', 'impactScore', 'keyChanges', 'update', 'links']
           }
         }
       },
@@ -302,6 +314,48 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
 
         const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+        const withChanges = data.companyUpdates.filter(u => u.hasChanges);
+        const withoutChanges = data.companyUpdates.filter(u => !u.hasChanges);
+
+        const getImpactColor = (score: number) => {
+            if (score >= 7) return { bg: '#fef2f2', border: '#fca5a5', text: '#991b1b', label: 'High' };
+            if (score >= 4) return { bg: '#fffbeb', border: '#fcd34d', text: '#92400e', label: 'Medium' };
+            return { bg: '#f0fdf4', border: '#86efac', text: '#166534', label: 'Low' };
+        };
+
+        const renderCompanyCard = (update: typeof data.companyUpdates[0]) => {
+            const impact = getImpactColor(update.impactScore);
+            const cardBorder = update.hasChanges ? impact.border : '#e5e7eb';
+            const cardBg = update.hasChanges ? '#ffffff' : '#f9fafb';
+
+            return `
+              <div class="company-card" style="border-color: ${cardBorder}; background-color: ${cardBg};">
+                <div class="company-name">
+                  ${update.competitorName}
+                  <span style="display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background-color: ${impact.bg}; color: ${impact.text}; border: 1px solid ${impact.border};">
+                    ${impact.label} Impact (${update.impactScore}/10)
+                  </span>
+                </div>
+                ${update.hasChanges && update.keyChanges.length > 0 ? `
+                <div style="margin-bottom: 10px;">
+                  ${update.keyChanges.map(change => `
+                    <div style="padding: 4px 0; font-size: 14px; color: #1f2937;">
+                      <span style="color: #2563eb; font-weight: 600;">&#8227;</span> ${change}
+                    </div>
+                  `).join('')}
+                </div>
+                ` : ''}
+                <div class="update-text">${update.update}</div>
+                ${update.links && update.links.length > 0 ? `
+                <div class="source-links">
+                    Sources:
+                    ${update.links.map((link, i) => `<a href="${link}" class="source-link" target="_blank">Link ${i + 1}</a>`).join('')}
+                </div>
+                ` : ''}
+              </div>
+            `;
+        };
+
         let html = `
         <!DOCTYPE html>
         <html>
@@ -314,7 +368,8 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
             .date { color: #6b7280; font-size: 14px; margin-top: 8px; }
             .section-title { font-size: 18px; font-weight: 600; color: #374151; margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
             .summary-card { background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin-bottom: 25px; font-size: 16px; color: #4b5563; }
-            .company-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 15px; transition: all 0.2s; }
+            .changes-banner { background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 15px 20px; margin-bottom: 25px; font-size: 14px; color: #1e40af; }
+            .company-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 15px; }
             .company-name { font-weight: 700; color: #111827; font-size: 16px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
             .update-text { color: #4b5563; font-size: 15px; }
             .source-links { margin-top: 10px; font-size: 12px; color: #6b7280; }
@@ -328,30 +383,28 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
         <body>
           <div class="container">
             <div class="header">
-              <h1>Daily Competitor Intelligence Brief</h1>
+              <h1>Competitor Intelligence Brief</h1>
               <div class="date">${today}</div>
+            </div>
+
+            <div class="changes-banner">
+              <strong>${withChanges.length} of ${data.companyUpdates.length}</strong> competitors had new developments detected.
+              ${withChanges.length > 0 ? `Top change: <strong>${withChanges[0]?.competitorName}</strong> (impact ${withChanges[0]?.impactScore}/10)` : 'No significant changes across the board.'}
             </div>
 
             <div class="summary-card">
               ${data.executiveSummary}
             </div>
 
-            <div class="section-title">Company Updates</div>
-            ${data.companyUpdates.map(update => `
-              <div class="company-card">
-                <div class="company-name">
-                  ${update.competitorName}
-                </div>
-                <div class="update-text">${update.update}</div>
-                <div class="source-links">
-                    Sources:
-                    ${update.links && update.links.length > 0 ? 
-                        update.links.map((link, i) => `<a href="${link}" class="source-link" target="_blank">Link ${i + 1}</a>`).join('') 
-                        : '<span style="color: #9ca3af; font-style: italic;">No source links provided</span>'
-                    }
-                </div>
-              </div>
-            `).join('')}
+            ${withChanges.length > 0 ? `
+            <div class="section-title">Changes Detected</div>
+            ${withChanges.map(renderCompanyCard).join('')}
+            ` : ''}
+
+            ${withoutChanges.length > 0 ? `
+            <div class="section-title" style="color: #9ca3af;">No Changes Detected</div>
+            ${withoutChanges.map(renderCompanyCard).join('')}
+            ` : ''}
 
             <div class="footer">
               <a href="https://competitor-analysis-sigma.vercel.app/" class="cta-button">View Full Dashboard</a>

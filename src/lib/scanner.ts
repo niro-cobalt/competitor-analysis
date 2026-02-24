@@ -115,8 +115,8 @@ export async function scanCompetitor(competitorId: string) {
         rawContent: { $exists: true, $ne: "" }
     }).sort({ createdAt: -1 });
 
-    // Analyze changes and search for news in parallel
-    const [analysis, news] = await Promise.all([
+    // Analyze changes and search for news in parallel; news failure is non-fatal
+    const [analysisResult, newsResult] = await Promise.allSettled([
         analyzeCompetitorUpdate(
             competitor.name,
             textContent,
@@ -128,6 +128,19 @@ export async function scanCompetitor(competitorId: string) {
         ),
         searchCompetitorNews(competitor.name)
     ]);
+
+    if (analysisResult.status === 'rejected') {
+        throw analysisResult.reason;
+    }
+
+    const analysis = analysisResult.value;
+    const news = newsResult.status === 'fulfilled'
+        ? newsResult.value
+        : { summary: '', newsItems: [] as string[] };
+
+    if (newsResult.status === 'rejected') {
+        console.warn(`[Scanner] News search failed for ${competitor.name}:`, newsResult.reason);
+    }
 
     // Create new scan record
     const newScan = await Scan.create({

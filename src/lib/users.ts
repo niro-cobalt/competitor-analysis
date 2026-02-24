@@ -56,19 +56,21 @@ export async function syncKindeUser(kindeUser: any): Promise<void> {
                 // Using process.env.VERCEL_URL for base. In dev, this might be missing or localhost.
                 const vercelUrl = process.env.VERCEL_URL ? process.env.VERCEL_URL.replace(/^https?:\/\//, '') : null;
                 const baseUrl = vercelUrl ? `https://${vercelUrl}` : 'http://localhost:3000';
-                const targetUrl = `${baseUrl}/api/cron/${orgId}?secret=${process.env.CRON_SECRET}`;
-                
-                console.log(`[SyncUser] Creating default cron job targeting: ${targetUrl}`);
-                
-                if (process.env.CRON_JOB_ORG_API_KEY) {
+                const cronSecret = process.env.CRON_SECRET;
+                if (!cronSecret) {
+                    console.warn('[SyncUser] CRON_SECRET missing, skipping cron creation.');
+                }
+
+                console.log(`[SyncUser] Creating default cron job targeting: ${baseUrl}/api/cron/${orgId}`);
+
+                if (cronSecret && process.env.CRON_JOB_ORG_API_KEY) {
+                    const targetUrl = `${baseUrl}/api/cron/${orgId}?secret=${cronSecret}`;
                     cronJobId = await createCronJob(orgId, {
                         title: 'Daily Email Report',
                         url: targetUrl,
                         schedule: getDailySchedule(9, 0)
                     });
                     console.log('[SyncUser] Cron job created:', cronJobId);
-                } else {
-                    console.warn('[SyncUser] CRON_JOB_ORG_API_KEY missing, skipping cron creation.');
                 }
 
             } catch (cronError) {

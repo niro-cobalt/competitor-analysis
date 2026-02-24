@@ -78,7 +78,7 @@ export async function POST(req: Request) {
 
                 if (existingSettings && existingSettings.cronJobId) {
                      await updateCronJob(orgId, existingSettings.cronJobId, { schedule });
-                } else {
+                } else if (process.env.CRON_SECRET) {
                      const vercelUrl = process.env.VERCEL_URL ? process.env.VERCEL_URL.replace(/^https?:\/\//, '') : null;
                      const baseUrl = vercelUrl ? `https://${vercelUrl}` : 'http://localhost:3000';
                      const targetUrl = `${baseUrl}/api/cron/${orgId}?secret=${process.env.CRON_SECRET}`;

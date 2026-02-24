@@ -232,12 +232,31 @@ export async function searchCompetitorNews(competitorName: string): Promise<News
 }
 
 
+function escapeHtml(str: string): string {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function sanitizeUrl(url: string): string {
+    try {
+        const parsed = new URL(url);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return '#';
+        return parsed.href;
+    } catch {
+        return '#';
+    }
+}
+
 const EmailReportSchema = z.object({
   executiveSummary: z.string(),
   companyUpdates: z.array(z.object({
     competitorName: z.string(),
     hasChanges: z.boolean(),
-    impactScore: z.number(),
+    impactScore: z.number().min(0).max(10),
     keyChanges: z.array(z.string()),
     update: z.string(),
     links: z.array(z.string())
@@ -331,7 +350,7 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
             return `
               <div class="company-card" style="border-color: ${cardBorder}; background-color: ${cardBg};">
                 <div class="company-name">
-                  ${update.competitorName}
+                  ${escapeHtml(update.competitorName)}
                   <span style="display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background-color: ${impact.bg}; color: ${impact.text}; border: 1px solid ${impact.border};">
                     ${impact.label} Impact (${update.impactScore}/10)
                   </span>
@@ -340,16 +359,16 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
                 <div style="margin-bottom: 10px;">
                   ${update.keyChanges.map(change => `
                     <div style="padding: 4px 0; font-size: 14px; color: #1f2937;">
-                      <span style="color: #2563eb; font-weight: 600;">&#8227;</span> ${change}
+                      <span style="color: #2563eb; font-weight: 600;">&#8227;</span> ${escapeHtml(change)}
                     </div>
                   `).join('')}
                 </div>
                 ` : ''}
-                <div class="update-text">${update.update}</div>
+                <div class="update-text">${escapeHtml(update.update)}</div>
                 ${update.links && update.links.length > 0 ? `
                 <div class="source-links">
                     Sources:
-                    ${update.links.map((link, i) => `<a href="${link}" class="source-link" target="_blank">Link ${i + 1}</a>`).join('')}
+                    ${update.links.map((link, i) => `<a href="${sanitizeUrl(link)}" class="source-link" target="_blank" rel="noopener noreferrer">Link ${i + 1}</a>`).join('')}
                 </div>
                 ` : ''}
               </div>
@@ -389,11 +408,11 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
 
             <div class="changes-banner">
               <strong>${withChanges.length} of ${data.companyUpdates.length}</strong> competitors had new developments detected.
-              ${withChanges.length > 0 ? `Top change: <strong>${withChanges[0]?.competitorName}</strong> (impact ${withChanges[0]?.impactScore}/10)` : 'No significant changes across the board.'}
+              ${withChanges.length > 0 ? `Top change: <strong>${escapeHtml(withChanges[0]?.competitorName ?? '')}</strong> (impact ${withChanges[0]?.impactScore}/10)` : 'No significant changes across the board.'}
             </div>
 
             <div class="summary-card">
-              ${data.executiveSummary}
+              ${escapeHtml(data.executiveSummary)}
             </div>
 
             ${withChanges.length > 0 ? `

@@ -19,10 +19,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Slack integration not configured' }, { status: 500 });
     }
 
-    const vercelUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}`
-      : 'http://localhost:3000';
-    const redirectUri = `${vercelUrl}/api/slack/callback`;
+    const baseUrl = process.env.APP_URL
+      || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null)
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}` : null)
+      || 'http://localhost:3000';
+    const redirectUri = `${baseUrl}/api/slack/callback`;
 
     const state = Buffer.from(
       JSON.stringify({ orgId, userId: user.id, userEmail: user.email })

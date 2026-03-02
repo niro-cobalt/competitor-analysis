@@ -10,28 +10,29 @@ export async function GET(req: NextRequest) {
   const stateParam = searchParams.get('state');
   const error = searchParams.get('error');
 
-  const vercelUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}`
-    : 'http://localhost:3000';
+  const baseUrl = process.env.APP_URL
+    || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null)
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}` : null)
+    || 'http://localhost:3000';
 
   if (error) {
     console.error('Slack OAuth error:', error);
-    return NextResponse.redirect(`${vercelUrl}/settings?slack=error`);
+    return NextResponse.redirect(`${baseUrl}/settings?slack=error`);
   }
 
   if (!code || !stateParam) {
-    return NextResponse.redirect(`${vercelUrl}/settings?slack=error`);
+    return NextResponse.redirect(`${baseUrl}/settings?slack=error`);
   }
 
   let state: { orgId: string; userId: string; userEmail: string };
   try {
     state = JSON.parse(Buffer.from(stateParam, 'base64url').toString());
   } catch {
-    return NextResponse.redirect(`${vercelUrl}/settings?slack=error`);
+    return NextResponse.redirect(`${baseUrl}/settings?slack=error`);
   }
 
   try {
-    const redirectUri = `${vercelUrl}/api/slack/callback`;
+    const redirectUri = `${baseUrl}/api/slack/callback`;
 
     const tokenRes = await fetch('https://slack.com/api/oauth.v2.access', {
       method: 'POST',
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
 
     if (!tokenData.ok) {
       console.error('Slack token exchange failed:', tokenData.error);
-      return NextResponse.redirect(`${vercelUrl}/settings?slack=error`);
+      return NextResponse.redirect(`${baseUrl}/settings?slack=error`);
     }
 
     await connectToDatabase();
@@ -70,9 +71,9 @@ export async function GET(req: NextRequest) {
       { upsert: true, new: true }
     );
 
-    return NextResponse.redirect(`${vercelUrl}/settings?slack=connected`);
+    return NextResponse.redirect(`${baseUrl}/settings?slack=connected`);
   } catch (err) {
     console.error('Slack callback error:', err);
-    return NextResponse.redirect(`${vercelUrl}/settings?slack=error`);
+    return NextResponse.redirect(`${baseUrl}/settings?slack=error`);
   }
 }

@@ -9,6 +9,8 @@ export interface ISettings extends Document {
   emailFrequency: 'daily' | 'weekly' | 'monthly';
   emailStyle: 'informative' | 'chatty' | 'minimalistic' | 'techy';
   includeTldr: boolean;
+  slackChannelId?: string;
+  slackChannelName?: string;
   cronJobId?: number;
   createdAt: Date;
   updatedAt: Date;
@@ -31,6 +33,8 @@ const SettingsSchema: Schema = new Schema({
     default: 'informative' 
   },
   includeTldr: { type: Boolean, default: true },
+  slackChannelId: { type: String },
+  slackChannelName: { type: String },
   cronJobId: { type: Number },
 }, { 
   timestamps: true,

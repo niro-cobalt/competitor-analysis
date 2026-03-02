@@ -34,9 +34,12 @@ const ScanSchema: Schema = new Schema({
   status: { type: String, enum: ['success', 'failed'], default: 'success' },
   durationMs: { type: Number, default: 0 },
   error: { type: String }
-}, { 
-  timestamps: true 
+}, {
+  timestamps: true
 });
+
+// Auto-expire scan records after 90 days
+ScanSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 const Scan: Model<IScan> = mongoose.models.Scan || mongoose.model<IScan>('Scan', ScanSchema);
 

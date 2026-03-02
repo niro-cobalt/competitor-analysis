@@ -5,6 +5,9 @@ import { generateEmailReport } from '@/lib/gemini';
 import { sendEmail } from '@/lib/email';
 import EmailLog from '@/models/EmailLog';
 import Subscriber from '@/models/Subscriber';
+import SlackInstallation from '@/models/SlackInstallation';
+import Settings from '@/models/Settings';
+import { buildSlackBlocks, sendSlackMessage } from '@/lib/slack';
 import pLimit from 'p-limit';
 
 export async function runOrgScan(orgId: string) {
@@ -53,7 +56,8 @@ export async function runOrgScan(orgId: string) {
     const errors = scanResults.filter(r => r.status === 'failed');
 
     let emailStatus = 'skipped';
-    
+    let slackStatus = 'skipped';
+
     if (emailData.length > 0) {
         console.log("Generating email report...");
         const emailHtml = await generateEmailReport(emailData);
@@ -95,12 +99,49 @@ export async function runOrgScan(orgId: string) {
                  await new Promise(resolve => setTimeout(resolve, 600));
             }
         }
+
+        // Send to Slack channels
+        try {
+            const slackInstall = await SlackInstallation.findOne({ organizationId: orgId });
+            if (slackInstall) {
+                const settingsWithSlack = await Settings.find({
+                    organizationId: orgId,
+                    slackChannelId: { $ne: null, $exists: true },
+                });
+
+                // Deduplicate channels
+                const channelMap = new Map<string, string>();
+                for (const s of settingsWithSlack) {
+                    if (s.slackChannelId) {
+                        channelMap.set(s.slackChannelId, s.slackChannelName || s.slackChannelId);
+                    }
+                }
+
+                if (channelMap.size > 0) {
+                    const blocks = buildSlackBlocks(emailData);
+                    const fallbackText = `Competitor Intelligence Report: ${emailData.length} competitors scanned`;
+
+                    for (const [channelId] of channelMap) {
+                        try {
+                            await sendSlackMessage(orgId, channelId, fallbackText, blocks);
+                            slackStatus = 'sent';
+                        } catch (slackErr) {
+                            console.error(`Failed to send Slack message to ${channelId}:`, slackErr);
+                            slackStatus = 'partial';
+                        }
+                    }
+                }
+            }
+        } catch (slackErr) {
+            console.error('Slack delivery failed:', slackErr);
+            slackStatus = 'failed';
+        }
     }
 
-    return { 
+    return {
         status: 'completed',
-        summary: `Scanned ${results.length} successfully, ${errors.length} failed. Email: ${emailStatus}`,
+        summary: `Scanned ${results.length} successfully, ${errors.length} failed. Email: ${emailStatus}. Slack: ${slackStatus}`,
         results,
-        errors 
+        errors
     };
 }

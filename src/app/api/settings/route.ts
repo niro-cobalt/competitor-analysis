@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import Settings from '@/models/Settings';
+import SlackInstallation from '@/models/SlackInstallation';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { getUserOrganization } from '@/lib/utils';
 import { updateCronJob, createCronJob, getDailySchedule } from '@/lib/cron-org';
@@ -18,10 +19,15 @@ export async function GET() {
     }
 
     await connectToDatabase();
-    
+
     // Find settings for this user
     let settings = await Settings.findOne({ userId: user.id });
-    
+
+    // Check if Slack is connected for this org
+    const slackInstallation = await SlackInstallation.findOne({ organizationId: orgId });
+    const slackConnected = !!slackInstallation;
+    const slackTeamName = slackInstallation?.teamName || '';
+
     // Return default structure if not found (don't create yet, just return default)
     if (!settings) {
         return NextResponse.json({
@@ -32,11 +38,13 @@ export async function GET() {
             userAvatar: user.picture,
             emailFrequency: 'weekly',
             emailStyle: 'informative',
-            includeTldr: true
+            includeTldr: true,
+            slackConnected,
+            slackTeamName,
         });
     }
 
-    return NextResponse.json(settings);
+    return NextResponse.json({ ...settings.toObject(), slackConnected, slackTeamName });
   } catch (error) {
     console.error('Failed to fetch settings:', error);
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
@@ -107,7 +115,9 @@ export async function POST(req: Request) {
                 emailFrequency: body.emailFrequency || 'weekly',
                 emailStyle: body.emailStyle || 'informative',
                 includeTldr: body.includeTldr !== undefined ? body.includeTldr : true,
-                ...(cronJobIdToSave ? { cronJobId: cronJobIdToSave } : {})
+                ...(cronJobIdToSave ? { cronJobId: cronJobIdToSave } : {}),
+                ...(body.slackChannelId !== undefined ? { slackChannelId: body.slackChannelId || null } : {}),
+                ...(body.slackChannelName !== undefined ? { slackChannelName: body.slackChannelName || null } : {})
             } 
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { CompetitorCard } from '@/components/CompetitorCard';
 import { AddCompetitorDialog } from '@/components/AddCompetitorDialog';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw, Loader2, Tag, X } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { ManageSubscribersDialog } from '@/components/ManageSubscribersDialog';
 import {
@@ -27,12 +27,26 @@ interface Competitor {
   instructions?: string;
   lastScannedAt?: string;
   updatedAt: string;
+  tags?: string[];
 }
 
 export default function DashboardClient({ user }: { user: any }) {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanningAll, setScanningAll] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  const allTags = Array.from(new Set(competitors.flatMap(c => c.tags || []))).sort();
+
+  const filteredCompetitors = selectedTags.length === 0
+    ? competitors
+    : competitors.filter(c => selectedTags.some(tag => c.tags?.includes(tag)));
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
 
   const fetchCompetitors = async () => {
     try {
@@ -111,6 +125,35 @@ export default function DashboardClient({ user }: { user: any }) {
           </div>
         </header>
 
+        {/* Tag Filters */}
+        {allTags.length > 0 && (
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
+            <Tag className="h-4 w-4 text-muted-foreground shrink-0" />
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
+                  selectedTags.includes(tag)
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+            {selectedTags.length > 0 && (
+              <button
+                onClick={() => setSelectedTags([])}
+                className="text-xs px-2 py-1 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <X className="h-3 w-3" />
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
         {loading ? (
              <div className="flex justify-center py-20">
                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -123,7 +166,7 @@ export default function DashboardClient({ user }: { user: any }) {
             </div>
         ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {competitors.map((comp) => (
+                {filteredCompetitors.map((comp) => (
                     <CompetitorCard 
                         key={comp._id} 
                         competitor={comp} 

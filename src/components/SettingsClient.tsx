@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast, Toaster } from 'sonner';
-import { Save, Loader2, User as UserIcon } from 'lucide-react';
+import { Save, Loader2, User as UserIcon, Lock, Hash, ExternalLink } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -23,6 +24,12 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+interface SlackChannel {
+    id: string;
+    name: string;
+    isPrivate: boolean;
+}
+
 interface SettingsData {
     userId: string;
     emailRecipients?: string[]; // Legacy
@@ -33,6 +40,10 @@ interface SettingsData {
     emailStyle: string;
     includeTldr: boolean;
     organizationId: string;
+    slackChannelId?: string;
+    slackChannelName?: string;
+    slackConnected?: boolean;
+    slackTeamName?: string;
 }
 
 export default function SettingsClient({ user }: { user: any }) {
@@ -45,8 +56,27 @@ export default function SettingsClient({ user }: { user: any }) {
     const [includeTldr, setIncludeTldr] = useState(true);
     const [organizationId, setOrganizationId] = useState('');
 
+    // Slack State
+    const [slackConnected, setSlackConnected] = useState(false);
+    const [slackTeamName, setSlackTeamName] = useState('');
+    const [slackChannelId, setSlackChannelId] = useState('');
+    const [slackChannelName, setSlackChannelName] = useState('');
+    const [slackChannels, setSlackChannels] = useState<SlackChannel[]>([]);
+    const [loadingChannels, setLoadingChannels] = useState(false);
+
     useEffect(() => {
         fetchSettings();
+
+        // Check for post-OAuth query param
+        const params = new URLSearchParams(window.location.search);
+        const slackParam = params.get('slack');
+        if (slackParam === 'connected') {
+            toast.success('Slack workspace connected successfully!');
+            window.history.replaceState({}, '', '/settings');
+        } else if (slackParam === 'error') {
+            toast.error('Failed to connect Slack workspace. Please try again.');
+            window.history.replaceState({}, '', '/settings');
+        }
     }, []);
 
     const fetchSettings = async () => {
@@ -58,6 +88,10 @@ export default function SettingsClient({ user }: { user: any }) {
                 setEmailFrequency(data.emailFrequency || 'weekly');
                 setEmailStyle(data.emailStyle || 'informative');
                 setIncludeTldr(data.includeTldr !== undefined ? data.includeTldr : true);
+                setSlackConnected(!!data.slackConnected);
+                setSlackTeamName(data.slackTeamName || '');
+                setSlackChannelId(data.slackChannelId || '');
+                setSlackChannelName(data.slackChannelName || '');
             }
         } catch (error) {
             console.error('Failed to load settings', error);
@@ -67,16 +101,39 @@ export default function SettingsClient({ user }: { user: any }) {
         }
     };
 
+    const fetchSlackChannels = async () => {
+        setLoadingChannels(true);
+        try {
+            const res = await fetch('/api/slack/channels');
+            if (res.ok) {
+                const data = await res.json();
+                setSlackChannels(data.channels || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch Slack channels', error);
+        } finally {
+            setLoadingChannels(false);
+        }
+    };
+
+    useEffect(() => {
+        if (slackConnected) {
+            fetchSlackChannels();
+        }
+    }, [slackConnected]);
+
     const handleSave = async () => {
         setSaving(true);
         try {
             const res = await fetch('/api/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     emailFrequency,
                     emailStyle,
-                    includeTldr
+                    includeTldr,
+                    slackChannelId: slackChannelId || null,
+                    slackChannelName: slackChannelName || null,
                 }),
             });
 
@@ -215,6 +272,83 @@ export default function SettingsClient({ user }: { user: any }) {
                                 />
                             </button>
                          </div>
+                    </CardContent>
+                </Card>
+
+                {/* Slack Integration Card */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Slack Integration</CardTitle>
+                        <CardDescription>
+                            Send competitor reports to a Slack channel alongside email delivery.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {!slackConnected ? (
+                            <div className="flex items-center justify-between rounded-lg border p-4">
+                                <div className="space-y-0.5">
+                                    <p className="text-sm font-medium">Connect your Slack workspace</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Authorize the app to post reports to your chosen channel.
+                                    </p>
+                                </div>
+                                <Button variant="outline" asChild>
+                                    <a href="/api/slack/install">
+                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                        Connect to Slack
+                                    </a>
+                                </Button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="flex items-center gap-2">
+                                    <Badge className="bg-green-600 hover:bg-green-600 text-white">Connected</Badge>
+                                    <span className="text-sm text-muted-foreground">
+                                        Workspace: <span className="font-medium text-foreground">{slackTeamName}</span>
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Channel</Label>
+                                    {loadingChannels ? (
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Loading channels...
+                                        </div>
+                                    ) : (
+                                        <Select
+                                            value={slackChannelId}
+                                            onValueChange={(value) => {
+                                                setSlackChannelId(value);
+                                                const ch = slackChannels.find(c => c.id === value);
+                                                setSlackChannelName(ch?.name || '');
+                                            }}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a channel" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {slackChannels.map((ch) => (
+                                                    <SelectItem key={ch.id} value={ch.id}>
+                                                        <span className="flex items-center gap-1.5">
+                                                            {ch.isPrivate ? (
+                                                                <Lock className="h-3 w-3 text-muted-foreground" />
+                                                            ) : (
+                                                                <Hash className="h-3 w-3 text-muted-foreground" />
+                                                            )}
+                                                            {ch.name}
+                                                        </span>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                    <p className="text-[10px] text-muted-foreground">
+                                        For private channels, invite the bot first with <code className="bg-muted px-1 rounded">/invite @CompetitorIntel</code>
+                                    </p>
+                                </div>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
 

@@ -20,9 +20,12 @@ const EmailLogSchema: Schema = new Schema({
   error: { type: String },
   organizationId: { type: String, required: true, index: true },
   sentAt: { type: Date, default: Date.now },
-}, { 
-  timestamps: true 
+}, {
+  timestamps: true
 });
+
+// Auto-expire email logs after 90 days
+EmailLogSchema.index({ sentAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 const EmailLog: Model<IEmailLog> = mongoose.models.EmailLog || mongoose.model<IEmailLog>('EmailLog', EmailLogSchema);
 

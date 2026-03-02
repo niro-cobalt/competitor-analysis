@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { CompetitorCard } from '@/components/CompetitorCard';
 import { AddCompetitorDialog } from '@/components/AddCompetitorDialog';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2, Tag, X } from 'lucide-react';
+import { RefreshCw, Loader2, Tag, X, Send } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { ManageSubscribersDialog } from '@/components/ManageSubscribersDialog';
 import {
@@ -34,6 +34,7 @@ export default function DashboardClient({ user }: { user: any }) {
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanningAll, setScanningAll] = useState(false);
+  const [sendingSlack, setSendingSlack] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const allTags = Array.from(new Set(competitors.flatMap(c => c.tags || []))).sort();
@@ -83,6 +84,20 @@ export default function DashboardClient({ user }: { user: any }) {
     }
   };
 
+  const handleSendToSlack = async () => {
+    setSendingSlack(true);
+    try {
+      const res = await fetch('/api/slack/send', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send to Slack');
+      toast.success(`Report sent to #${data.channel}`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send to Slack');
+    } finally {
+      setSendingSlack(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-background p-6 md:p-10 relative overflow-y-auto w-full">
        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -104,8 +119,25 @@ export default function DashboardClient({ user }: { user: any }) {
 
           <div className="flex items-center gap-3">
              <ManageSubscribersDialog />
-             <Button 
-                onClick={handleScanAll} 
+             <Button
+                variant="outline"
+                onClick={handleSendToSlack}
+                disabled={sendingSlack}
+             >
+                {sendingSlack ? (
+                    <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                    </>
+                ) : (
+                    <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send to Slack
+                    </>
+                )}
+             </Button>
+             <Button
+                onClick={handleScanAll}
                 disabled={scanningAll} 
                 className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all"
             >

@@ -58,6 +58,29 @@ export async function runOrgScan(orgId: string) {
     let emailStatus = 'skipped';
     let slackStatus = 'skipped';
 
+    // Check frequency setting — skip sending if not enough time has passed
+    const orgSettings = await Settings.findOne({ organizationId: orgId });
+    const frequency = orgSettings?.emailFrequency || 'weekly';
+    const minIntervalMs = frequency === 'daily' ? 20 * 60 * 60 * 1000   // 20h (buffer for cron drift)
+                        : frequency === 'weekly' ? 6 * 24 * 60 * 60 * 1000  // 6 days
+                        :                         27 * 24 * 60 * 60 * 1000;  // 27 days (monthly)
+
+    const lastSent = await EmailLog.findOne(
+        { organizationId: orgId, status: 'sent' },
+        {},
+        { sort: { sentAt: -1 } }
+    );
+
+    if (lastSent && (Date.now() - lastSent.sentAt.getTime()) < minIntervalMs) {
+        console.log(`Skipping notifications — frequency is '${frequency}' and last sent ${lastSent.sentAt.toISOString()}`);
+        return {
+            status: 'skipped_frequency',
+            summary: `Scan completed but notifications skipped (frequency: ${frequency}, last sent: ${lastSent.sentAt.toISOString()})`,
+            results,
+            errors
+        };
+    }
+
     if (emailData.length > 0) {
         console.log("Generating email report...");
         const emailHtml = await generateEmailReport(emailData);

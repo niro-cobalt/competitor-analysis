@@ -1,5 +1,12 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface INewsItem {
+  title: string;
+  description: string;
+  sourceUrl: string;
+  date: string;
+}
+
 export interface IScan extends Document {
   competitorId: mongoose.Types.ObjectId;
   scannedAt: Date;
@@ -11,7 +18,7 @@ export interface IScan extends Document {
   changesDetected: string[]; // Array of strings describing changes
   impactScore: number;
   newsSummary: string;
-  newsItems?: string[];
+  newsItems?: INewsItem[];
   links?: string[];
   status: 'success' | 'failed';
   durationMs: number;
@@ -30,7 +37,12 @@ const ScanSchema: Schema = new Schema({
   impactScore: { type: Number, default: 0 },
   links: { type: [String], default: [] },
   newsSummary: { type: String, default: '' },
-  newsItems: { type: [String], default: [] },
+  newsItems: { type: [{
+    title: { type: String },
+    description: { type: String },
+    sourceUrl: { type: String },
+    date: { type: String }
+  }], default: [] },
   status: { type: String, enum: ['success', 'failed'], default: 'success' },
   durationMs: { type: Number, default: 0 },
   error: { type: String }

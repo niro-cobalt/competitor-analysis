@@ -81,6 +81,14 @@ export function buildSlackBlocks(emailData: any[]): any[] {
       section += `\n\n*News:* ${item.newsSummary}`;
     }
 
+    if (item.newsItems && item.newsItems.length > 0) {
+      const newsLinks = item.newsItems
+        .slice(0, 3)
+        .map((n: any) => typeof n === 'string' ? `  - ${n}` : `  - <${n.sourceUrl}|${n.title}>`)
+        .join('\n');
+      section += `\n${newsLinks}`;
+    }
+
     blocks.push({
       type: 'section',
       text: { type: 'mrkdwn', text: section.slice(0, 3000) },

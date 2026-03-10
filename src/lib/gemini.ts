@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
+import { searchTavily, type TavilySearchResult } from './tavily';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
@@ -136,12 +137,14 @@ export async function analyzeCompetitorUpdate(
   };
 
   try {
+    // Fix 6: Enable Google Search grounding for analysis to verify claims
     const result = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       config: {
         responseMimeType: 'application/json',
-        responseSchema: jsonSchema as any
+        responseSchema: jsonSchema as any,
+        tools: [{ googleSearch: {} }]
       }
     });
 
@@ -168,18 +171,108 @@ export async function analyzeCompetitorUpdate(
   }
 }
 
-const NewsSearchSchema = z.object({
-  summary: z.string(),
-  newsItems: z.array(z.string()),
+// Fix 5: Structured news items with per-item source URLs
+const NewsItemSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  sourceUrl: z.string(),
+  date: z.string(),
 });
 
+const NewsSearchSchema = z.object({
+  summary: z.string(),
+  newsItems: z.array(NewsItemSchema),
+});
+
+export type NewsItem = z.infer<typeof NewsItemSchema>;
 export type NewsSearchResult = z.infer<typeof NewsSearchSchema>;
 
+/**
+ * Extract grounding source URLs from Gemini's grounding metadata (Fix 1)
+ */
+function extractGroundingUrls(result: any): string[] {
+  try {
+    const metadata = result?.candidates?.[0]?.groundingMetadata;
+    if (!metadata) return [];
+
+    const urls: string[] = [];
+
+    // Extract from grounding chunks
+    if (metadata.groundingChunks) {
+      for (const chunk of metadata.groundingChunks) {
+        if (chunk.web?.uri) {
+          urls.push(chunk.web.uri);
+        }
+      }
+    }
+
+    // Extract from grounding supports
+    if (metadata.groundingSupports) {
+      for (const support of metadata.groundingSupports) {
+        if (support.groundingChunkIndices && metadata.groundingChunks) {
+          for (const idx of support.groundingChunkIndices) {
+            const chunk = metadata.groundingChunks[idx];
+            if (chunk?.web?.uri && !urls.includes(chunk.web.uri)) {
+              urls.push(chunk.web.uri);
+            }
+          }
+        }
+      }
+    }
+
+    return urls;
+  } catch {
+    return [];
+  }
+}
+
 export async function searchCompetitorNews(competitorName: string): Promise<NewsSearchResult> {
+  // Fix 4: Date constraints to prevent stale training data contamination
+  const today = new Date().toISOString().split('T')[0];
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // Fetch Tavily results in parallel with Gemini (provides independent grounding source)
+  const tavilyPromise = searchTavily(competitorName, { maxResults: 5, timeRange: 'month' });
+
+  // Build Tavily context for the prompt (will be populated if Tavily returns first, otherwise empty)
+  let tavilyContext = '';
+  let tavilyResults: TavilySearchResult[] = [];
+
+  try {
+    const tavilyResponse = await tavilyPromise;
+    tavilyResults = tavilyResponse.results;
+
+    if (tavilyResults.length > 0) {
+      tavilyContext = `
+
+      VERIFIED NEWS FROM TAVILY SEARCH (use these as your PRIMARY source of truth):
+      ${tavilyResults.map((r, i) => `
+      [${i + 1}] Title: ${r.title}
+          URL: ${r.url}
+          Content: ${r.content.substring(0, 500)}
+          Relevance Score: ${r.score}
+      `).join('\n')}
+
+      IMPORTANT: Prioritize reporting news items that appear in the Tavily results above. Use the URLs from Tavily as sourceUrl values.
+      `;
+    }
+  } catch (err) {
+    console.warn(`[Tavily] Pre-fetch failed for ${competitorName}, proceeding with Gemini only:`, err);
+  }
+
+  // Fix 3: Strengthened prompt with strict grounding requirements
   const prompt = `
   You are a competitive intelligence analyst.
   Find the latest meaningful news, press releases, and major announcements for: ${competitorName}.
-  
+  ${tavilyContext}
+
+  CRITICAL RULES:
+  - ONLY report facts that you found in actual search results. Do NOT use your training data or prior knowledge.
+  - Each news item MUST include the source URL where you found the information. If you cannot find a source URL, do NOT include the item.
+  - Only include news from the last 30 days (between ${thirtyDaysAgo} and ${today}).
+  - If you find NO verifiable news from search results, return an empty newsItems array and say so in the summary.
+  - Do NOT guess, speculate, or infer events that are not explicitly stated in search results.
+
   Focus on:
   - Strategic partnerships
   - New product launches
@@ -192,6 +285,12 @@ export async function searchCompetitorNews(competitorName: string): Promise<News
   - Minor bug fixes or changelogs
   - Stock market daily fluctuations unless extreme
 
+  For each news item, provide:
+  - title: A short headline
+  - description: 1-2 sentence summary of the news
+  - sourceUrl: The URL where this news was found (MUST be a real URL from search results)
+  - date: The date of the news (YYYY-MM-DD format, or "unknown" if not clear)
+
   Output a strictly valid JSON object matching this schema.
   `;
 
@@ -199,7 +298,19 @@ export async function searchCompetitorNews(competitorName: string): Promise<News
     type: 'OBJECT',
     properties: {
       summary: { type: 'STRING' },
-      newsItems: { type: 'ARRAY', items: { type: 'STRING' } }
+      newsItems: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: {
+            title: { type: 'STRING' },
+            description: { type: 'STRING' },
+            sourceUrl: { type: 'STRING' },
+            date: { type: 'STRING' }
+          },
+          required: ['title', 'description', 'sourceUrl', 'date']
+        }
+      }
     },
     required: ['summary', 'newsItems']
   };
@@ -222,11 +333,63 @@ export async function searchCompetitorNews(competitorName: string): Promise<News
     }
 
     const parsedJson = JSON.parse(cleanJson(result.text));
-    return NewsSearchSchema.parse(parsedJson);
+    const parsed = NewsSearchSchema.parse(parsedJson);
+
+    // Fix 1: Extract grounding URLs from Gemini metadata
+    const groundingUrls = extractGroundingUrls(result);
+    console.log(`[Grounding] Gemini URLs for ${competitorName}:`, groundingUrls);
+
+    // Combine grounding sources: Gemini grounding URLs + Tavily result URLs
+    const tavilyUrls = tavilyResults.map(r => r.url);
+    const allGroundingUrls = [...new Set([...groundingUrls, ...tavilyUrls])];
+    console.log(`[Grounding] Combined grounding URLs (${allGroundingUrls.length}) for ${competitorName}`);
+
+    // Fix 2: Filter out ungrounded claims
+    // Keep items whose sourceUrl matches a grounding URL from either Gemini or Tavily
+    let filteredItems = parsed.newsItems;
+    if (allGroundingUrls.length > 0) {
+      filteredItems = parsed.newsItems.filter(item => {
+        // Check if the item's sourceUrl domain matches any grounding URL domain
+        try {
+          const itemDomain = new URL(item.sourceUrl).hostname.replace('www.', '');
+          return allGroundingUrls.some(gUrl => {
+            try {
+              const gDomain = new URL(gUrl).hostname.replace('www.', '');
+              return itemDomain === gDomain || gUrl.includes(itemDomain) || item.sourceUrl === gUrl;
+            } catch { return false; }
+          });
+        } catch {
+          // Invalid URL — not grounded
+          return false;
+        }
+      });
+
+      const removedCount = parsed.newsItems.length - filteredItems.length;
+      if (removedCount > 0) {
+        console.log(`[Grounding] Filtered out ${removedCount} ungrounded news items for ${competitorName}`);
+      }
+    }
+
+    return {
+      summary: parsed.summary,
+      newsItems: filteredItems
+    };
 
   } catch (error) {
-    console.error(`Values search failed for ${competitorName}:`, error);
-    // Fail gracefully
+    console.error(`News search failed for ${competitorName}:`, error);
+    // Fail gracefully — if Gemini fails but Tavily succeeded, return Tavily results directly
+    if (tavilyResults.length > 0) {
+      console.log(`[Fallback] Using Tavily results directly for ${competitorName}`);
+      return {
+        summary: `News sourced from Tavily search (Gemini unavailable)`,
+        newsItems: tavilyResults.map(r => ({
+          title: r.title,
+          description: r.content.substring(0, 200),
+          sourceUrl: r.url,
+          date: 'unknown'
+        }))
+      };
+    }
     return { summary: "Failed to fetch news", newsItems: [] };
   }
 }
@@ -263,7 +426,7 @@ const EmailReportSchema = z.object({
   }))
 });
 
-export async function generateEmailReport(scans: { competitor: string, summary: string, changes: string[], impactScore: number, newsSummary?: string, newsItems?: string[] }[]): Promise<string> {
+export async function generateEmailReport(scans: { competitor: string, summary: string, changes: string[], impactScore: number, newsSummary?: string, newsItems?: NewsItem[] }[]): Promise<string> {
     const prompt = `
     You are a competitive intelligence analyst generating a CHANGE-FOCUSED briefing.
     Here are the results of the latest monitoring scan:
@@ -315,13 +478,15 @@ export async function generateEmailReport(scans: { competitor: string, summary: 
     };
 
     try {
+        // Fix 7: Enable Google Search grounding for email report generation
         const result = await ai.models.generateContent({
           model: MODEL_NAME,
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           config: {
             responseMimeType: 'application/json',
             responseSchema: jsonSchema as any,
-            temperature: 0.0
+            temperature: 0.0,
+            tools: [{ googleSearch: {} }]
           }
         });
     

@@ -23,7 +23,10 @@ const mockScans = [
     changes: ["New feature: Crypto Payouts", "Updated API docs"], 
     impactScore: 8, 
     newsSummary: "Stripe announces major expansion into crypto markets.", 
-    newsItems: ["Stripe enables crypto payouts for platforms", "Partnership with Polygon"] 
+    newsItems: [
+      { title: "Stripe enables crypto payouts for platforms", description: "Stripe launched crypto payout support for platform partners.", sourceUrl: "https://stripe.com/blog/crypto-payouts", date: "2026-03-01" },
+      { title: "Partnership with Polygon", description: "Stripe partners with Polygon for Layer 2 payments.", sourceUrl: "https://techcrunch.com/stripe-polygon", date: "2026-03-05" }
+    ]
   },
   { 
     competitor: "Adyen", 
@@ -37,7 +40,9 @@ const mockScans = [
       changes: ["Fee update", "Legal terms update"],
       impactScore: 3,
       newsSummary: "Quarterly earnings report released.",
-      newsItems: ["Q4 Earnings beat expectations"]
+      newsItems: [
+        { title: "Q4 Earnings beat expectations", description: "PayPal reported Q4 earnings above analyst estimates.", sourceUrl: "https://reuters.com/paypal-q4", date: "2026-02-28" }
+      ]
   }
 ];
 

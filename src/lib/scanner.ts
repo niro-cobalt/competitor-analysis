@@ -1,7 +1,7 @@
 import connectToDatabase from '@/lib/db';
 import Competitor from '@/models/Competitor';
 import Scan from '@/models/Scan';
-import { analyzeCompetitorUpdate, searchCompetitorNews } from '@/lib/gemini';
+import { analyzeCompetitorUpdate, searchCompetitorNews, type NewsItem } from '@/lib/gemini';
 
 export async function scanCompetitor(competitorId: string) {
   const startTime = Date.now();
@@ -136,7 +136,7 @@ export async function scanCompetitor(competitorId: string) {
     const analysis = analysisResult.value;
     const news = newsResult.status === 'fulfilled'
         ? newsResult.value
-        : { summary: '', newsItems: [] as string[] };
+        : { summary: '', newsItems: [] as NewsItem[] };
 
     if (newsResult.status === 'rejected') {
         console.warn(`[Scanner] News search failed for ${competitor.name}:`, newsResult.reason);
